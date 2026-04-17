@@ -1,6 +1,6 @@
 {
   "name": "frenzy",
-  "module": "index.ts",
+  "module": "src/index.ts",
   "type": "module",
   "private": true,
   "devDependencies": {
@@ -10,6 +10,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@openrouter/sdk": "^0.12.14",
     "axios": "^1.15.0",
     "form-data": "^4.0.5"
   }

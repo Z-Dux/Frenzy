@@ -1,76 +1,92 @@
-from fastapi import FastAPI, UploadFile, File
-import cv2
+import os
+os.environ["FLAGS_use_mkldnn"] = "false"
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import requests
 import numpy as np
+import cv2
 from paddleocr import PaddleOCR
-from sklearn.linear_model import LinearRegression
 
 app = FastAPI()
-ocr = PaddleOCR(use_angle_cls=True, lang='en')
 
 
-def extract_price_labels(image):
-    results = ocr.ocr(image, cls=True)
-    price_points = []
-
-    for line in results:
-        for word in line:
-            text = word[1][0]
-            box = word[0]
-
-            try:
-                value = float(text.replace(",", ""))
-                y = int(np.mean([p[1] for p in box]))
-                price_points.append((y, value))
-            except:
-                continue
-
-    return price_points
+class ImageRequest(BaseModel):
+    url: str
 
 
-def detect_chart_line(gray):
-    edges = cv2.Canny(gray, 50, 150)
-    return edges
+def load_image_from_url(url: str):
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://discord.com"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch image: {response.status_code}")
+
+    content_type = response.headers.get("Content-Type", "")
+    if "image" not in content_type:
+        raise Exception(f"URL did not return an image. Got: {content_type}")
+
+    img_array = np.frombuffer(response.content, np.uint8)
+    img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+    if img is None:
+        raise Exception("OpenCV failed to decode image")
+
+    return img
 
 
-def extract_line_points(edges):
-    h, w = edges.shape
-    points = []
-
-    for x in range(w):
-        ys = np.where(edges[:, x] > 0)[0]
-        if len(ys) > 0:
-            y = int(np.mean(ys))
-            points.append((x, y))
-
-    return np.array(points)
+def to_serializable(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, (list, tuple)):
+        return [to_serializable(x) for x in obj]
+    elif isinstance(obj, dict):
+        return {k: to_serializable(v) for k, v in obj.items()}
+    else:
+        return obj
 
 
-def fit_mapping(price_points):
-    ys = np.array([p[0] for p in price_points]).reshape(-1, 1)
-    prices = np.array([p[1] for p in price_points])
-
-    model = LinearRegression()
-    model.fit(ys, prices)
-    return model
+ocr = PaddleOCR(
+    use_doc_orientation_classify=False,
+    use_doc_unwarping=False,
+    use_textline_orientation=False,
+)
 
 
 @app.post("/parse-chart")
-async def parse_chart(file: UploadFile = File(...)):
-    contents = await file.read()
+async def parse_chart(req: ImageRequest):
+    try:
+        img = load_image_from_url(req.url)
 
-    npimg = np.frombuffer(contents, np.uint8)
-    img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        results = ocr.predict(img)
+        for res in results:
+            res.save_to_img("output")
 
-    price_labels = extract_price_labels(img)
-    edges = detect_chart_line(gray)
-    points = extract_line_points(edges)
+        raw_output = []
 
-    model = fit_mapping(price_labels)
+        for res in results:
+            try:
+                raw_output.append({
+                    "rec_texts": to_serializable(res.get("rec_texts", [])),
+                    "rec_scores": to_serializable(res.get("rec_scores", [])),
+                    "rec_boxes": to_serializable(res.get("rec_boxes", [])),
+                    "det_boxes": to_serializable(res.get("det_boxes", [])),
+                })
+            except Exception:
+                continue
 
-    series = []
-    for x, y in points:
-        price = model.predict([[y]])[0]
-        series.append({"x": int(x), "price": float(price)})
+        return {
+            "status": "success",
+            "image_shape": {
+                "height": img.shape[0],
+                "width": img.shape[1]
+            },
+            "results": raw_output
+        }
 
-    return {"series": series}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
