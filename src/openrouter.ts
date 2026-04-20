@@ -19,22 +19,15 @@ export type TradeType = "long" | "short" | null;
 
 export interface TradeAnalysis {
   has_trade: boolean;
-
   type: TradeType;
-
   entry: number | null;
   stop_loss: number | null;
   take_profit: number | null;
-
-  risk_reward_ratio: number | null;
-
   confidence: number; // 0 → 1
-
+  current_price: number | null;
+  order_type: "limit" | "market" | null;
   timeframe: string | null;
   asset: string | null;
-
-  levels: number[];
-
   insights: string[];
   warnings: string[];
 }

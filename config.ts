@@ -15,4 +15,6 @@ export const config = {
     "1461803739013976138"
   ],
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
+  DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN || "",
+  tradeLog: "1495776991490605106"
 };

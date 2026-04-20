@@ -4,6 +4,7 @@ import { sleep } from "bun";
 import { isTradingBased } from "./groq";
 import { extractChart } from "./chartParser";
 import { processMessage } from "./openrouter";
+import { sendTrade } from "./discordBot/utils";
 
 export const client = new Client();
 
@@ -30,6 +31,7 @@ client.on("messageCreate", async (message) => {
   const analysedTrade = await processMessage(scrapedContent.m);
 
   console.log(`→ Analysed trade from ${message.author.tag}:`, analysedTrade);
+  sendTrade(analysedTrade as any, message);
 });
 
 async function getMessage(msgId: string, channelId: string) {
