@@ -1,3 +1,6 @@
+import axios from "axios";
+import { processChart } from "./openrouter";
+
 export type OCRResult = {
   rec_texts: string[];
   rec_scores: number[];
@@ -30,7 +33,7 @@ export function parseChartData(data: PaddleOCRData) {
     metadata: [] as string[],
   };
 
-  const RIGHT_PANEL_BOUNDARY = width * 0.85; // Prices
+  const RIGHT_PANEL_BOUNDARY = width * 0.75; // Prices
   const BOTTOM_PANEL_BOUNDARY = height * 0.8; // Time
 
   result.rec_texts.forEach((text, index) => {
@@ -98,4 +101,40 @@ function parsePrice(text: string): number | null {
   }
 
   return Number(clean);
+}
+async function parseChart(url: string) {
+  const res = await axios.post("http://127.0.0.1:8000/parse-chart", {
+    url,
+  });
+
+  return res.data as PaddleOCRData;
+}
+export type PromptData = {
+  processedData: ReturnType<typeof parseChartData>;
+  rawData: {
+    texts: string[];
+    boxes: number[][];
+  };
+};
+export async function extractChart(url: string) {
+  const res = await parseChart(url); // Get ocr data
+  const data = parseChartData(res); // Process ocr data into structured chart info
+
+  const rawData = res.results[0] as OCRResult;
+
+  const promptData: PromptData = {
+    processedData: data,
+    rawData: {
+      texts: rawData.rec_texts,
+      boxes: rawData.rec_boxes,
+    },
+  };
+
+  //console.log(`✓ Chart parsed successfully:`, promptData);
+  const inference = await processChart(url, promptData);
+  //@ts-ignore
+  promptData.rawData = {}; // Remove raw data to save memory
+  console.log(`→ Chart inference:`, inference);
+
+  return inference;
 }

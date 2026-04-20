@@ -1,24 +1,4 @@
-import axios from "axios";
-import { parseChartData, type OCRResult, type PaddleOCRData } from "./chartParser";
-
-async function parseChart(url: string) {
-  const res = await axios.post("http://127.0.0.1:8000/parse-chart", {
-    url,
-  });
-
-  console.log(res.data);
-  return res.data as PaddleOCRData;
-} 
-
-const res = await parseChart("https://cdn.discordapp.com/attachments/1490112835450048703/1494617243349418084/image.png?ex=69e34247&is=69e1f0c7&hm=6c3c565dbbbde9a2b9289b8d95ef0b0fc5137edca116701319c737d3aa7f5b3d");
-const data = parseChartData(res);
-console.log(data);
-const rawData = res.results[0] as OCRResult;
-
-const promptData = {
-  processedData: data,
-  rawData: {
-    texts: rawData.rec_texts,
-    boxes: rawData.rec_boxes,
-  },
-}
+import { extractChart } from "./chartParser";
+import "./discord";
+//const a = await extractChart("https://cdn.discordapp.com/attachments/1411492212721848481/1495824111270891801/image.png?ex=69e7a643&is=69e654c3&hm=cc0b78993f8ec4a71607a412a7479e6dba96bb9430f51160c2ccede9f931cf70")
+//console.log(a)
