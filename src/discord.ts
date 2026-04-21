@@ -5,6 +5,7 @@ import { isTradingBased } from "./groq";
 import { extractChart } from "./chartParser";
 import { processMessage } from "./openrouter";
 import { sendTrade } from "./discordBot/utils";
+import { binance } from "./binance";
 
 export const client = new Client();
 
@@ -23,14 +24,23 @@ client.on("messageCreate", async (message) => {
 
   const isTradingRelated = await isTradingBased(message.content);
 
-  if (!isTradingRelated && message.attachments.size === 0) return;
+  const attachmentWithImaes = message.attachments.filter((att) =>
+    att.contentType?.startsWith("image"),
+  );
+  if (!isTradingRelated && attachmentWithImaes.size === 0) return;
   console.log(`✓ Processing message: ${message.id} from ${message.author.tag}`);
   const scrapedContent = await scrapeMessages(message);
-  
-  console.log(`→ Scraped content:`, scrapedContent, scrapedContent.m[0]?.attachments);
+
+  console.log(
+    `→ Scraped content:`,
+    scrapedContent,
+    scrapedContent.m[0]?.attachments,
+  );
   const analysedTrade = await processMessage(scrapedContent.m);
 
   console.log(`→ Analysed trade from ${message.author.tag}:`, analysedTrade);
+  
+  analysedTrade.asset = (await binance.searchCoin(analysedTrade.asset || ""))[0]?.symbol || analysedTrade.asset;
   sendTrade(analysedTrade as any, message);
 });
 
@@ -134,7 +144,7 @@ export async function scrapeMessages(message: Message) {
     if (msg.attachments.size > 0) {
       content += " [img]";
     }
-    console.log(`Extracting chart...`)
+    console.log(`Extracting chart...`);
     result.push({
       id: msg.id.slice(-5),
       user: mapUser(msg.author.username),
@@ -147,7 +157,9 @@ export async function scrapeMessages(message: Message) {
       ),
       reference: msg.reference?.messageId?.slice(-4),
     });
-    console.log(`Extracted chart for message ${msg.id}, attachments: ${msg.attachments.size}`);
+    console.log(
+      `Extracted chart for message ${msg.id}, attachments: ${msg.attachments.size}`,
+    );
   }
 
   result.sort((a, b) => a.time - b.time);

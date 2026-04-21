@@ -1,5 +1,6 @@
 import {
   ButtonStyle,
+  codeBlock,
   ContainerBuilder,
   MessageFlags,
   UserSelectMenuBuilder,
@@ -8,9 +9,11 @@ import type { TradeAnalysis } from "../openrouter";
 import { botClient } from ".";
 import { config } from "../../config";
 import type { Message } from "discord.js-selfbot-v13";
+import "colors"
 
 export async function sendTrade(trade: TradeAnalysis, message: Message<true>) {
-  if (!(trade.has_trade && trade.entry && trade.stop_loss)) return false;
+  if (!(trade.has_trade && (trade.entry || trade.order_type==`market`) && trade.stop_loss)) return false;
+
   const tradePara = [
     `### [Trade from ${message.author.tag} in ${message.channel.guild?.name}](${message.url})`,
     `- **Entry:** \`$${trade.entry}\``,
@@ -19,8 +22,14 @@ export async function sendTrade(trade: TradeAnalysis, message: Message<true>) {
   ].join("\n");
   const additionalPara = [
     `- **Current Price:** \`${trade.current_price}\``,
+    `- **Action:** \`${trade.action}\``,
     `- **Asset:** \`${trade.asset}\``,
   ].join("\n");
+  const texts = [
+    ...trade.insights.map((i) => `- 💡 ${i}`.green),
+    ...trade.warnings.map((w) => `- ⚠️ ${w}`.yellow),
+  ].join("\n");
+  
   const exampleContainer = new ContainerBuilder()
     .setAccentColor(0x2f3136)
     .addSectionComponents((section) =>
@@ -45,6 +54,10 @@ export async function sendTrade(trade: TradeAnalysis, message: Message<true>) {
     .addSeparatorComponents((separator) => separator)
     .addTextDisplayComponents((textDisplay) =>
       textDisplay.setContent(additionalPara),
+    )
+    .addSeparatorComponents((separator) => separator)
+    .addTextDisplayComponents((textDisplay) =>
+      textDisplay.setContent(codeBlock("ansi",texts || "- No insights or warnings")),
     );
 
   const channel = await botClient.channels.fetch(config.tradeLog);

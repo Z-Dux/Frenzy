@@ -19,6 +19,7 @@ export type TradeType = "long" | "short" | null;
 
 export interface TradeAnalysis {
   has_trade: boolean;
+  action: "pending" | "missed" | "active" | null;
   type: TradeType;
   entry: number | null;
   stop_loss: number | null;
@@ -38,14 +39,21 @@ export async function processChart(imageURL: string, data: PromptData) {
   });
   const PROMPT = `Analyze the image and determine if a trading setup is present.
 
-Focus specifically on detecting TradingView position tools (red/green boxes), price levels, and trade intent. Ignore generic chart descriptions unless they are necessary for understanding the trade.
+**CRITICAL REQUIREMENT:** A trade setup is ONLY defined by the presence of a TradingView Long or Short Position Tool (composed of two adjacent colored boxes, typically red and green or gray and orange). 
+
+* **If NO position tool boxes are present:** * Set "has_trade": false. 
+    * Return null for all price/action fields.
+    * In "insights", state: "No standard Long/Short position tool detected on the chart."
+    * **Do not** treat horizontal lines, arrows, or labels as a trade setup.
+
+Focus specifically on detecting these position tools, price levels, and trade intent. Ignore generic chart descriptions unless necessary.
 
 Return ONLY valid JSON. No explanations, no extra text.
 
 Schema:
-
 {
 "has_trade": boolean,
+"action": "pending" | "missed" | "active" | null,
 "type": "long" | "short" | null,
 "entry": number | null,
 "stop_loss": number | null,
@@ -60,22 +68,24 @@ Schema:
 }
 
 Rules:
-
-* Detect trade using visual cues (red/green zones, position tool).
+* "action" Logic:
+  * "pending": The most recent (rightmost) candle is located to the left of the position tool's starting vertical edge, or has not yet touched the entry price line.
+  * "pending": Also if few candles have touched the box.
+  * "active": The most recent (rightmost) candle is horizontally aligned with the position tool and its price (wick or body) is currently inside either the green/red or gray/orange boxes.
+  * "missed": The most recent (rightmost) candle is located entirely to the right of the position tool's shaded area without having been filled, OR the price has hit the TP/SL target area while the current candle is already past the tool's horizontal duration.
 * "type" Logic:
-  * If the RED (or SMALL or DARKER box) box is ABOVE the GREEN (or LARGE or LIGHTER box) box, it is a SHORT.
-  * If the GREEN (or LARGE or LIGHTER box) box is ABOVE the RED (or SMALL or DARKER box) box, it is a LONG.
-* "entry" is the price level where boxes are separated buy color.
-* Extract prices only if clearly visible. Otherwise return null.
-* "current_price" often above a time label (eg: "12:30")
+  * If the RED (or SMALLER/DARKER) box is ABOVE the GREEN (or LARGER/LIGHTER) box, it is a SHORT.
+  * If the GREEN (or LARGER/LIGHTER) box is ABOVE the RED (or SMALLER/DARKER) box, it is a LONG.
+* "entry" is the price level where the two boxes are separated by color.
+* "stop_loss" is the price level of the box furthest from the current price (top box for shorts, bottom box for longs).
+* "take_profit" is the price level of the box closest to the current price (bottom box for shorts, top box for longs).
+* Extract prices only if they are explicitly linked to the edges of the position tool. Otherwise return null.
+* "asset" must be returned in Binance API/Standard format (e.g., BTCUSDT, XAUUSD). Remove slashes or spaces.
 * "order_type" market if entry level touches current price and last candle touches box border, otherwise limit.
 * "confidence" is between 0 and 1 based on clarity of the setup.
-* "insights" should describe trade logic (e.g., resistance rejection, breakout, trend continuation).
-* "warnings" should include uncertainty, missing data, or possible misinterpretations.
+* "insights" should describe trade logic (e.g., "Price trading in profit zone," "Entry zone not yet reached").
+* "warnings" should include uncertainty or missing data.
 * Do NOT hallucinate price movement that has not happened.
-* If no trade setup is detected:
-  * set "has_trade": false
-  * everything else null/empty except "insights"
 
 Return JSON only.
 `;
@@ -173,9 +183,15 @@ export async function processMessage(msg: CompactMsg[]) {
        - "type": If Take Profit < Entry, it's a "short". If Take Profit > Entry, it's a "long". (Message overrides this if explicit).
        - "order_type": Default to "market" unless "limit" is mentioned in text.
 
+    RULES FOR INTERPRETING THE TRADE SETUP:
+    * "action" is "pending" if candle has not touched the box. "active" if last candle is inside the box. "missed" if last candle is outside, to right of the box.
+    * "@ m" represents market entry, and action is "pending".
+    * "asset" ticker for the asset, standard format.
+
     SCHEMA:
       {
         "has_trade": boolean,
+        "action": "pending" | "missed" | "active" | null,
         "type": "long" | "short" | null,
         "entry": number | null,
         "stop_loss": number | null,
@@ -194,7 +210,7 @@ export async function processMessage(msg: CompactMsg[]) {
 
   const response = await openRouter.chat.send({
     chatRequest: {
-      model: "meta-llama/llama-3.1-8b-instruct",
+      model: "qwen/qwen3-vl-32b-instruct",
       messages: [
         {
           role: "system",
@@ -204,6 +220,7 @@ export async function processMessage(msg: CompactMsg[]) {
         { role: "user", content: AGGREGATOR_PROMPT },
       ],
       temperature: 0.1,
+      //maxTokens: 6000
     },
   });
 

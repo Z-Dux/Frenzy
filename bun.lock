@@ -4,6 +4,8 @@
     "": {
       "name": "frenzy",
       "dependencies": {
+        "@binance/derivatives-trading-coin-futures": "^13.0.7",
+        "@binance/derivatives-trading-usds-futures": "^28.0.0",
         "@openrouter/sdk": "^0.12.14",
         "axios": "^1.15.0",
         "colors": "^1.4.0",
@@ -23,6 +25,12 @@
     },
   },
   "packages": {
+    "@binance/common": ["@binance/common@2.3.12", "", { "dependencies": { "@types/ws": "^8.5.5", "axios": "^1.7.4", "json-with-bigint": "^3.4.4", "ws": "^8.17.1" } }, "sha512-BH7YGBhznlaE3HBi0M+gLofemWfPCjK8XWA8HvbnV4F64HOGRhVznPvkH1d+sMpK7d7MGdzJCqgvKF9K/+VY9A=="],
+
+    "@binance/derivatives-trading-coin-futures": ["@binance/derivatives-trading-coin-futures@13.0.7", "", { "dependencies": { "@binance/common": "2.3.12", "@types/ws": "^8.5.5", "axios": "^1.7.4", "ws": "^8.17.1" } }, "sha512-7/TjJ/1X5xe6y2dbEm4jws57FgAg54Ab0NIDgLHJZq2GQ2b+KbIKyySp2VH+wmzkfbV4ev6FPEmycdZxq+vreA=="],
+
+    "@binance/derivatives-trading-usds-futures": ["@binance/derivatives-trading-usds-futures@28.0.0", "", { "dependencies": { "@binance/common": "2.3.12", "@types/ws": "^8.5.5", "axios": "^1.7.4", "ws": "^8.17.1" } }, "sha512-4fHr2ce6ZVRCDfKXY2Lntf3JevV3tG8njqGsljFWGz9FkTMaruvoUmpffPmBZQo9B67VRUFI/BJi+WwhcaSayg=="],
+
     "@discordjs/builders": ["@discordjs/builders@1.14.1", "", { "dependencies": { "@discordjs/formatters": "^0.6.2", "@discordjs/util": "^1.2.0", "@sapphire/shapeshift": "^4.0.0", "discord-api-types": "^0.38.40", "fast-deep-equal": "^3.1.3", "ts-mixer": "^6.0.4", "tslib": "^2.6.3" } }, "sha512-gSKkhXLqs96TCzk66VZuHHl8z2bQMJFGwrXC0f33ngK+FLNau4hU1PYny3DNJfNdSH+gVMzE85/d5FQ2BpcNwQ=="],
 
     "@discordjs/collection": ["@discordjs/collection@1.5.3", "", {}, "sha512-SVb428OMd3WO1paV3rm6tSjM4wC+Kecaa1EUGX7vc6/fddvw/6lg90z4QtCqm21zvVe92vMMDt9+DkIvjXImQQ=="],
@@ -162,6 +170,8 @@
     "ieee754": ["ieee754@1.2.1", "", {}, "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA=="],
 
     "is-fullwidth-code-point": ["is-fullwidth-code-point@3.0.0", "", {}, "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg=="],
+
+    "json-with-bigint": ["json-with-bigint@3.5.8", "", {}, "sha512-eq/4KP6K34kwa7TcFdtvnftvHCD9KvHOGGICWwMFc4dOOKF5t4iYqnfLK8otCRCRv06FXOzGGyqE8h8ElMvvdw=="],
 
     "locate-path": ["locate-path@5.0.0", "", { "dependencies": { "p-locate": "^4.1.0" } }, "sha512-t7hw9pI+WvuwNJXwk5zVHpyhIqzg2qTlklJOf0mVxGSbe3Fp2VieZcduNYjaLDoy6p9uGpQEGWG87WpMKlNq8g=="],
 

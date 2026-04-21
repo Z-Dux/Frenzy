@@ -10,7 +10,7 @@ export async function isTradingBased(content:string): Promise<boolean> {
             messages: [
                 {
                     role: "system",
-                    content: `You check if the given message content is related to trading strategy (stocks, forex, crypto, commodities, etc). Respond with a single word: "true" or "false". STRICTLY DO NOT provide any explanations.`,
+                    content: `You check if the given message content has any trading setups. Check if the content contains anything like stop loss (SL), take profit (TP), or other trading-related terms. Respond with a single word: "true" or "false". STRICTLY DO NOT provide any explanations.`,
                 },
                 {
                     role: "user",
