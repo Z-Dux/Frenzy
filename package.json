@@ -4,7 +4,9 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest"
+    "@mikro-orm/cli": "^7.0.11",
+    "@types/bun": "latest",
+    "vitest": "^4.1.5"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -12,6 +14,10 @@
   "dependencies": {
     "@binance/derivatives-trading-coin-futures": "^13.0.7",
     "@binance/derivatives-trading-usds-futures": "^28.0.0",
+    "@mikro-orm/core": "^7.0.11",
+    "@mikro-orm/mongodb": "^7.0.11",
+    "@mikro-orm/postgresql": "^7.0.11",
+    "@mikro-orm/sqlite": "^7.0.11",
     "@openrouter/sdk": "^0.12.14",
     "axios": "^1.15.0",
     "colors": "^1.4.0",
@@ -19,7 +25,10 @@
     "discord.js": "^14.26.3",
     "discord.js-selfbot-v13": "^3.7.1",
     "dotenv": "^17.4.2",
+    "fastify": "^5.8.5",
     "form-data": "^4.0.5",
-    "groq-sdk": "^1.1.2"
+    "groq-sdk": "^1.1.2",
+    "install": "^0.13.0",
+    "pg": "^8.20.0"
   }
 }

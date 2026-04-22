@@ -6,6 +6,8 @@ import { extractChart } from "./chartParser";
 import { processMessage } from "./openrouter";
 import { sendTrade } from "./discordBot/utils";
 import { binance } from "./binance";
+import { orm } from "./database";
+import { TradeAnalysisSchema } from "./schema/tradeAnalysis";
 
 export const client = new Client();
 
@@ -39,9 +41,25 @@ client.on("messageCreate", async (message) => {
   const analysedTrade = await processMessage(scrapedContent.m);
 
   console.log(`→ Analysed trade from ${message.author.tag}:`, analysedTrade);
-  
-  analysedTrade.asset = (await binance.searchCoin(analysedTrade.asset || ""))[0]?.symbol || analysedTrade.asset;
+
+  analysedTrade.asset = analysedTrade.asset
+    ? (await binance.searchCoin(analysedTrade.asset || ""))[0]?.symbol ||
+      analysedTrade.asset
+    : null;
+  if(analysedTrade.confidence < 0.5) return;
   sendTrade(analysedTrade as any, message);
+  if (
+    !(
+      analysedTrade.has_trade &&
+      (analysedTrade.entry || analysedTrade.order_type == `market`) &&
+      analysedTrade.stop_loss
+    )
+  )
+    return;
+  const em = orm.em.fork();
+  const trade = em.create(TradeAnalysisSchema, analysedTrade);
+  await em.flush();
+  console.log(`✓ Trade analysis saved to database with id ${trade._id}`);
 });
 
 async function getMessage(msgId: string, channelId: string) {
