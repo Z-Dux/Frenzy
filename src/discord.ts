@@ -8,6 +8,7 @@ import { sendTrade } from "./discordBot/utils";
 import { binance } from "./binance";
 import { orm } from "./database";
 import { TradeAnalysisSchema } from "./schema/tradeAnalysis";
+import { trader } from "./trader";
 
 export const client = new Client();
 
@@ -46,16 +47,36 @@ client.on("messageCreate", async (message) => {
     ? (await binance.searchCoin(analysedTrade.asset || ""))[0]?.symbol ||
       analysedTrade.asset
     : null;
-  if(analysedTrade.confidence < 0.5) return;
+  if (analysedTrade.confidence < 0.5) return;
   sendTrade(analysedTrade as any, message);
   if (
     !(
       analysedTrade.has_trade &&
       (analysedTrade.entry || analysedTrade.order_type == `market`) &&
-      analysedTrade.stop_loss
+      analysedTrade.stop_loss &&
+      analysedTrade.asset
     )
   )
     return;
+  if (analysedTrade.action === "pending") {
+    if (!analysedTrade.type || !analysedTrade.asset) return;
+    await trader.addTrade({
+      asset: analysedTrade.asset,
+      entry: analysedTrade.entry || 0,
+      stop_loss: analysedTrade.stop_loss,
+      take_profit: analysedTrade.take_profit || null,
+      leverage: 1,
+      margin: 0,
+      enteredPrice: null,
+      direction: analysedTrade.type,
+      order_type: analysedTrade.order_type || "limit",
+      author: message.author.id,
+      messageUrl: message.url,
+      closedAt: null,
+      closedPrice: null,
+      status: "pending",
+    }, true);
+  }
   const em = orm.em.fork();
   const trade = em.create(TradeAnalysisSchema, analysedTrade);
   await em.flush();

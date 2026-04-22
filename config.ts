@@ -17,5 +17,12 @@ export const config = {
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
   DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN || "",
   tradeLog: "1495776991490605106",
+  portfolioLog: "1496499342272630925",
   MONGODB_URI: process.env.MONGODB_URI || "",
 };
+
+
+export const tradeConfig = {
+  leverage: 10,
+  riskPerTrade: 0.05,
+}

@@ -41,6 +41,7 @@ export class Binance extends EventEmitter {
   > | null = null;
 
   private activeStreams: Set<string> = new Set();
+  private streamHandles = new Map<string, { unsubscribe: () => void }>();
 
   override on<K extends keyof BinanceEvents>(
     event: K,
@@ -80,6 +81,7 @@ export class Binance extends EventEmitter {
     this.activeStreams.add(symbol);
 
     const stream = this.wsConnection.individualSymbolTickerStreams({ symbol });
+    this.streamHandles.set(symbol, stream);
 
     stream.on("message", (data: unknown) => {
       const ticker = data as TickerStreamMessage;
@@ -95,11 +97,16 @@ export class Binance extends EventEmitter {
   }
 
   public unsubscribe(coin: string) {
+    console.log(`Unsubscribing from ${coin}`);
     const symbol = coin.toLowerCase();
 
     if (!this.wsConnection || !this.activeStreams.has(symbol)) return;
 
-    this.wsConnection.unsubscribe([`${symbol}@ticker`]);
+    const stream = this.streamHandles.get(symbol);
+    if (stream) {
+      stream.unsubscribe();
+      this.streamHandles.delete(symbol);
+    }
     this.activeStreams.delete(symbol);
   }
 
