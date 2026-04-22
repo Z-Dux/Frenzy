@@ -89,7 +89,7 @@ export async function sendTrade(trade: TradeAnalysis, message: Message<true>) {
 export async function openTrade(trade: Trade) {
   if (trade.status !== "active") return;
   if (!trade.enteredPrice) trade.enteredPrice = trade.entry;
-  const channel = await botClient.channels.fetch(config.portfolioLog);
+  const channel = await botClient.channels.fetch(config.portfolioLog.open);
 
   const texts = [
     `### Trade opened for \`${trade.asset}\``,
@@ -151,7 +151,7 @@ export async function closeTrade(trade: Trade) {
   const port = await trader.getPortfolio();
   const bal = port ? port.balance : 0;
 
-  const channel = await botClient.channels.fetch(config.portfolioLog);
+  const channel = await botClient.channels.fetch(config.portfolioLog.close);
 
   const directionMultiplier = trade.direction === "long" ? 1 : -1;
 
@@ -173,7 +173,7 @@ export async function closeTrade(trade: Trade) {
   ].join("\n");
 
   const texts2 = [
-    `- Leverage: \`${trade.leverage}x\``,
+    `- Leverage: \`${trade.leverage.toFixed(2)}x\``,
     `- Margin: \`${trade.margin.toFixed(2)} USDT\``,
     `- PnL: \`${profitAmount >= 0 ? "+" : ""}${profitAmount.toFixed(2)} USDT (${pnlPercent.toFixed(2)}%)\``,
   ].join("\n");

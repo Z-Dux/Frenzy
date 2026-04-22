@@ -39,10 +39,13 @@ export class Binance extends EventEmitter {
   private wsConnection: Awaited<
     ReturnType<DerivativesTradingUsdsFutures["websocketStreams"]["connect"]>
   > | null = null;
+  private wsConnectionPromise: Promise<
+    Awaited<ReturnType<DerivativesTradingUsdsFutures["websocketStreams"]["connect"]>>
+  > | null = null;
 
   private activeStreams: Set<string> = new Set();
   private streamHandles = new Map<string, { unsubscribe: () => void }>();
-
+  coinPrices: Map<string, number> = new Map();
   override on<K extends keyof BinanceEvents>(
     event: K,
     listener: BinanceEvents[K],
@@ -70,13 +73,22 @@ export class Binance extends EventEmitter {
   }
 
   public async subscribe(coin: string) {
+    console.log(`Subscribing to ${coin}`);
     const symbol = coin.toLowerCase();
 
     if (!this.wsConnection) {
-      this.wsConnection = await this.client.websocketStreams.connect();
+      this.wsConnectionPromise ??= this.client.websocketStreams
+        .connect()
+        .then((connection) => {
+          this.wsConnection = connection;
+          this.wsConnectionPromise = null;
+          return connection;
+        });
+
+      this.wsConnection = await this.wsConnectionPromise;
     }
 
-    if (this.activeStreams.has(symbol)) return;
+    if (this.activeStreams.has(symbol) || this.streamHandles.has(symbol)) return;
 
     this.activeStreams.add(symbol);
 
@@ -93,6 +105,7 @@ export class Binance extends EventEmitter {
         low: Number(ticker.l),
         change: Number(ticker.P),
       });
+      this.coinPrices.set(ticker.s, Number(ticker.c));
     });
   }
 
@@ -100,7 +113,7 @@ export class Binance extends EventEmitter {
     console.log(`Unsubscribing from ${coin}`);
     const symbol = coin.toLowerCase();
 
-    if (!this.wsConnection || !this.activeStreams.has(symbol)) return;
+    if (!this.activeStreams.has(symbol)) return;
 
     const stream = this.streamHandles.get(symbol);
     if (stream) {
@@ -108,6 +121,13 @@ export class Binance extends EventEmitter {
       this.streamHandles.delete(symbol);
     }
     this.activeStreams.delete(symbol);
+
+    if (this.activeStreams.size === 0) {
+      void this.wsConnection?.disconnect().finally(() => {
+        this.wsConnection = null;
+        this.wsConnectionPromise = null;
+      });
+    }
   }
 
   public async searchCoin(keyword: string) {

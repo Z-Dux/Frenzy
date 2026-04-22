@@ -19,7 +19,7 @@ client.on("ready", async () => {
 
 client.on("messageCreate", async (message) => {
   1461803739013976138;
-  if (message.author.bot || message.content.toLowerCase().split(" ")[0] == "fc")
+  if ((message.author.bot && message.author.id != "1458201079513747652"))
     return;
   if (!(message.guildId && config.discordServers.includes(message.guildId)))
     return;

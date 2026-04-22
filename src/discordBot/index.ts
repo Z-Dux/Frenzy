@@ -1,13 +1,14 @@
 import { Client, Events, GatewayIntentBits } from "discord.js";
 import { config } from "../../config";
+import { listenLive } from "./live";
 
 export const botClient = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
-
 botClient.once(Events.ClientReady, (readyClient) => {
-	console.log(`Ready! Logged in as ${readyClient.user.tag} as a bot`);
+  console.log(`Ready! Logged in as ${readyClient.user.tag} as a bot`);
+  listenLive();
 });
 
 botClient.login(config.DISCORD_BOT_TOKEN);

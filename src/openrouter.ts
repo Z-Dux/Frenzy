@@ -82,17 +82,18 @@ Rules:
 * Extract prices only if they are explicitly linked to the edges of the position tool. Otherwise return null.
 * "asset" must be returned in Binance API/Standard format (e.g., BTCUSDT, XAUUSD). Remove slashes or spaces.
 * "order_type" market if entry level touches current price and last candle touches box border, otherwise limit.
-* "confidence" is between 0 and 1 based on clarity of the setup.
+* "confidence" is between 0 and 1 defining how certain it is a trade setup.
 * "insights" should describe trade logic (e.g., "Price trading in profit zone," "Entry zone not yet reached").
 * "warnings" should include uncertainty or missing data.
 * Do NOT hallucinate price movement that has not happened.
+* STRICTLY DIFFERENTIATE between DRAWINGS and CANDLES inorder to determine if a trade is active, pending, or missed!
 
 Return JSON only.
 `;
   const result = await openRouter.chat.send({
     chatRequest: {
       model: "qwen/qwen2.5-vl-72b-instruct",
-      temperature: 0.1,
+      temperature: 0.3,
       maxTokens: 1000, // <--- ADD THIS LINE
       messages: [
         {
@@ -187,6 +188,9 @@ export async function processMessage(msg: CompactMsg[]) {
     * "action" is "pending" if candle has not touched the box. "active" if last candle is inside the box. "missed" if last candle is outside, to right of the box.
     * "@ m" represents market entry, and action is "pending".
     * "asset" ticker for the asset, standard format.
+    * "confidence" is between 0 and 1 defining how certain it is a trade setup.
+    * "order_type" is "limit" if entry price is mentioned.
+    
 
     SCHEMA:
       {
@@ -219,7 +223,7 @@ export async function processMessage(msg: CompactMsg[]) {
         },
         { role: "user", content: AGGREGATOR_PROMPT },
       ],
-      temperature: 0.1,
+      temperature: 0.3,
       //maxTokens: 6000
     },
   });

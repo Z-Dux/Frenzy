@@ -69,6 +69,7 @@ export class Trader {
     }
   }
   async addPnL(amount: number) {
+    console.log(`Adding PnL: ${amount.toFixed(4)} USDT`);
     const portfolio = await this.getPortfolio();
     if (!portfolio) {
       console.log(`✗ Portfolio not found when adding PnL`);
@@ -134,11 +135,12 @@ export class Trader {
       );
       for (const trade of trades) {
         const errorMarginPct = 0.0003; // 0.03% error margin
+        const entryMargin = trade.entry * errorMarginPct;
         let updated = false;
         if (
           trade.status === "pending" &&
-          ((trade.entry - errorMarginPct <= price.price &&
-            price.price <= trade.entry + errorMarginPct) ||
+          ((trade.entry - entryMargin <= price.price &&
+            price.price <= trade.entry + entryMargin) ||
             trade.order_type === "market")
         ) {
           trade.status = "active";
@@ -204,8 +206,9 @@ export class Trader {
             ((trade.direction === "long" &&
               price.price <=
                 trade.stop_loss + trade.stop_loss * errorMarginPct) ||
-              (trade.direction === "short" && price.price) ||
-              price.price >= trade.stop_loss - trade.stop_loss * errorMarginPct)
+              (trade.direction === "short" &&
+                price.price >=
+                  trade.stop_loss - trade.stop_loss * errorMarginPct))
           ) {
             this.removeTrade(trade);
             trade.status = "closed";
