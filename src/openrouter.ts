@@ -17,6 +17,13 @@ type PromptData = {
 };
 export type TradeType = "long" | "short" | null;
 
+type ChartCheckResult = {
+	isStockChart: boolean;
+	confidence: number;
+	reason: string;
+};
+
+
 export interface TradeAnalysis {
   has_trade: boolean;
   action: "pending" | "missed" | "active" | null;
@@ -37,59 +44,89 @@ export async function processChart(imageURL: string, data: PromptData) {
     imageURL,
     data: data,
   });
-  const PROMPT = `Analyze the image and determine if a trading setup is present.
+  const PROMPT = `Analyze the image and detect a TradingView Long/Short Position Tool (two adjacent colored boxes).
 
-**CRITICAL REQUIREMENT:** A trade setup is ONLY defined by the presence of a TradingView Long or Short Position Tool (composed of two adjacent colored boxes, typically red and green or gray and orange). 
-
-* **If NO position tool boxes are present:** * Set "has_trade": false. 
-    * Return null for all price/action fields.
-    * In "insights", state: "No standard Long/Short position tool detected on the chart."
-    * **Do not** treat horizontal lines, arrows, or labels as a trade setup.
-
-Focus specifically on detecting these position tools, price levels, and trade intent. Ignore generic chart descriptions unless necessary.
-
-Return ONLY valid JSON. No explanations, no extra text.
-
-Schema:
+If NONE found:
 {
-"has_trade": boolean,
-"action": "pending" | "missed" | "active" | null,
-"type": "long" | "short" | null,
-"entry": number | null,
-"stop_loss": number | null,
-"take_profit": number | null,
-"confidence": number,
-"current_price": number | null,
-"order_type": "limit" | "market" | null,
-"timeframe": string | null,
-"asset": string | null,
-"insights": string[],
-"warnings": string[]
+  "has_trade": false,
+  "action": null,
+  "type": null,
+  "entry": null,
+  "stop_loss": null,
+  "take_profit": null,
+  "confidence": 0,
+  "current_price": null,
+  "order_type": null,
+  "timeframe": null,
+  "asset": null,
+  "setup": "NO_SETUP",
+  "insights": ["No standard Long/Short position tool detected on the chart."],
+  "warnings": []
 }
 
-Rules:
-* "action" Logic:
-  * "pending": The most recent (rightmost) candle is located to the left of the position tool's starting vertical edge, or has not yet touched the entry price line.
-  * "pending": Also if few candles have touched the box.
-  * "active": The most recent (rightmost) candle is horizontally aligned with the position tool and its price (wick or body) is currently inside either the green/red or gray/orange boxes.
-  * "missed": The most recent (rightmost) candle is located entirely to the right of the position tool's shaded area without having been filled, OR the price has hit the TP/SL target area while the current candle is already past the tool's horizontal duration.
-* "type" Logic:
-  * If the RED (or SMALLER/DARKER) box is ABOVE the GREEN (or LARGER/LIGHTER) box, it is a SHORT.
-  * If the GREEN (or LARGER/LIGHTER) box is ABOVE the RED (or SMALLER/DARKER) box, it is a LONG.
-* "entry" is the price level where the two boxes are separated by color.
-* "stop_loss" is the price level of the box furthest from the current price (top box for shorts, bottom box for longs).
-* "take_profit" is the price level of the box closest to the current price (bottom box for shorts, top box for longs).
-* Extract prices only if they are explicitly linked to the edges of the position tool. Otherwise return null.
-* "asset" must be returned in Binance API/Standard format (e.g., BTCUSDT, XAUUSD). Remove slashes or spaces.
-* "order_type" market if entry level touches current price and last candle touches box border, otherwise limit.
-* "confidence" is between 0 and 1 defining how certain it is a trade setup.
-* "insights" should describe trade logic (e.g., "Price trading in profit zone," "Entry zone not yet reached").
-* "warnings" should include uncertainty or missing data.
-* Do NOT hallucinate price movement that has not happened.
-* STRICTLY DIFFERENTIATE between DRAWINGS and CANDLES inorder to determine if a trade is active, pending, or missed!
+---
 
-Return JSON only.
-`;
+If found, return JSON:
+
+{
+  "has_trade": true,
+  "action": "pending" | "active" | "missed",
+  "setup": "PENDING_SETUP" | "ACTIVE_ENTRY" | "MISSED_TRADE" | "MISSED_BUT_ACTIVE" | "INVALIDATED_SETUP",
+  "type": "long" | "short",
+  "entry": number | null,
+  "stop_loss": number | null,
+  "take_profit": number | null,
+  "confidence": number,
+  "current_price": number | null,
+  "order_type": "limit" | "market" | null,
+  "timeframe": string | null,
+  "asset": string | null,
+  "insights": string[],
+  "warnings": string[]
+}
+
+---
+
+RULES:
+
+Detection:
+- ONLY consider TradingView position tool boxes.
+- Ignore lines, arrows, labels.
+
+Type:
+- Red above green → SHORT
+- Green above red → LONG
+
+Levels:
+- Entry = boundary between boxes
+- Stop_loss = farthest box edge from current price
+- Take_profit = closest box edge to current price
+
+Action:
+- pending → price not reached entry OR candles not inside box
+- active → current candle inside box
+- missed → price moved past tool (right side) OR TP/SL hit after zone expired
+
+Setup Mapping:
+- pending → PENDING_SETUP
+- active → ACTIVE_ENTRY
+- missed:
+    - if SL/structure invalidated → INVALIDATED_SETUP
+    - if price moved without entry → MISSED_TRADE
+    - if still valid (no SL hit) → MISSED_BUT_ACTIVE
+
+Order Type:
+- market → entry ≈ current price AND candle touching box
+- else limit
+
+Other:
+- Extract prices ONLY from tool edges
+- Asset format: BTCUSDT (no slashes)
+- Confidence: 0–1
+- No hallucination
+- Strictly distinguish candles vs drawings
+
+Return ONLY JSON.`;
   const result = await openRouter.chat.send({
     chatRequest: {
       model: "qwen/qwen2.5-vl-72b-instruct",
@@ -142,7 +179,7 @@ function extractJSON(text: string): string | null {
   return null;
 }
 
-function safeJSONParse(text: string) {
+function safeJSONParse<T>(text: string): T {
   const extracted = extractJSON(text);
 
   if (!extracted) {
@@ -231,4 +268,41 @@ export async function processMessage(msg: CompactMsg[]) {
   return safeJSONParse(
     response.choices[0]?.message.content || "{}",
   ) as TradeAnalysis;
+}
+
+
+export async function isStockChartImage(imageUrl: string) {
+	const prompt = `You are an image classifier.
+Decide if the image is a STOCK MARKET CHART/GRAPH (candlesticks/line chart with price-time axes or trading chart UI).
+
+Return ONLY JSON with this exact schema:
+{
+	"isStockChart": boolean,
+	"confidence": number,
+}
+
+Rules:
+- confidence must be from 0 to 1.
+- STRICTLY must identify price or time axes and candles!
+- If uncertain, set isStockChart=false.
+- No markdown, no extra text.`;
+
+	const response = await openRouter.chat.send({
+		chatRequest: {
+			model: "qwen/qwen3.5-flash-02-23",
+			temperature: 0.1,
+			messages: [
+				{ role: "system", content: prompt },
+				{
+					role: "user",
+					content: [
+						{ type: "image_url", imageUrl: { url: imageUrl } },
+					],
+				},
+			],
+		},
+	});
+
+	const raw = response.choices[0]?.message.content || "";
+	return safeJSONParse<ChartCheckResult>(raw);
 }

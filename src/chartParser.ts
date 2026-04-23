@@ -1,5 +1,5 @@
 import axios from "axios";
-import { processChart } from "./openrouter";
+import { isStockChartImage, processChart } from "./openrouter";
 
 export type OCRResult = {
   rec_texts: string[];
@@ -117,9 +117,13 @@ export type PromptData = {
   };
 };
 export async function extractChart(url: string) {
-  const res = await parseChart(url); // Get ocr data
-  const data = parseChartData(res); // Process ocr data into structured chart info
+  const isStockChart = isStockChartImage(url);
+  
+  const res = await parseChart(url); 
+  const data = parseChartData(res);
 
+  if ((await isStockChart).isStockChart === false) return console.log(`✗ Image is not a stock chart: ${url}`);
+  console.log(isStockChart)
   const rawData = res.results[0] as OCRResult;
 
   const promptData: PromptData = {

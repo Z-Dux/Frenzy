@@ -75,6 +75,7 @@ export class Trader {
       console.log(`✗ Portfolio not found when adding PnL`);
       return;
     }
+    portfolio.balance += amount;
     portfolio.pnl += amount;
     portfolio.pnlHistory.push({ date: new Date(), pnl: portfolio.pnl });
     const em = orm.em.fork();
@@ -84,7 +85,7 @@ export class Trader {
   async getPortfolio() {
     const em = orm.em.fork();
 
-    const [portfolio] = await em.find(PortfolioSchema, {}, { limit: 1 });
+    let [portfolio] = await em.find(PortfolioSchema, {}, { limit: 1 });
     if (!portfolio) {
       const newPortfolio = em.create(PortfolioSchema, {
         balance: 500,
@@ -94,8 +95,11 @@ export class Trader {
       em.persist(newPortfolio);
       await em.flush();
       console.log(`✓ Portfolio created with id ${newPortfolio._id}`);
-      return newPortfolio;
+      portfolio = newPortfolio;
+      //return newPortfolio;
     }
+    this.portfolio.balance = portfolio.balance;
+    this.portfolio.pnl = portfolio.pnl;
     return portfolio;
   }
   async addTrade(trade: Trade, create = false) {

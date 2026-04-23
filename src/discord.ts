@@ -19,8 +19,7 @@ client.on("ready", async () => {
 
 client.on("messageCreate", async (message) => {
   1461803739013976138;
-  if ((message.author.bot && message.author.id != "1458201079513747652"))
-    return;
+  if (message.author.bot && message.author.id != "1458201079513747652") return;
   if (!(message.guildId && config.discordServers.includes(message.guildId)))
     return;
   if (!message.inGuild()) return;
@@ -39,6 +38,7 @@ client.on("messageCreate", async (message) => {
     scrapedContent,
     scrapedContent.m[0]?.attachments,
   );
+  if(scrapedContent.m.length === 0) return console.log(`✗ No valid attachments found in message ${message.id}`);
   const analysedTrade = await processMessage(scrapedContent.m);
 
   console.log(`→ Analysed trade from ${message.author.tag}:`, analysedTrade);
@@ -60,22 +60,25 @@ client.on("messageCreate", async (message) => {
     return;
   if (analysedTrade.action === "pending") {
     if (!analysedTrade.type || !analysedTrade.asset) return;
-    await trader.addTrade({
-      asset: analysedTrade.asset,
-      entry: analysedTrade.entry || 0,
-      stop_loss: analysedTrade.stop_loss,
-      take_profit: analysedTrade.take_profit || null,
-      leverage: 1,
-      margin: 0,
-      enteredPrice: null,
-      direction: analysedTrade.type,
-      order_type: analysedTrade.order_type || "limit",
-      author: message.author.id,
-      messageUrl: message.url,
-      closedAt: null,
-      closedPrice: null,
-      status: "pending",
-    }, true);
+    await trader.addTrade(
+      {
+        asset: analysedTrade.asset,
+        entry: analysedTrade.entry || 0,
+        stop_loss: analysedTrade.stop_loss,
+        take_profit: analysedTrade.take_profit || null,
+        leverage: 1,
+        margin: 0,
+        enteredPrice: null,
+        direction: analysedTrade.type,
+        order_type: analysedTrade.order_type || "limit",
+        author: message.author.id,
+        messageUrl: message.url,
+        closedAt: null,
+        closedPrice: null,
+        status: "pending",
+      },
+      true,
+    );
   }
   const em = orm.em.fork();
   const trade = em.create(TradeAnalysisSchema, analysedTrade);
@@ -183,17 +186,20 @@ export async function scrapeMessages(message: Message) {
     if (msg.attachments.size > 0) {
       content += " [img]";
     }
+    const attachments = (await Promise.all(
+      msg.attachments.map(
+        async (attachment) => await extractChart(attachment.url),
+      ),
+    )).filter(Boolean);
+
+    if(attachments.length == 0) continue;
     console.log(`Extracting chart...`);
     result.push({
       id: msg.id.slice(-5),
       user: mapUser(msg.author.username),
       time: Math.floor(msg.createdTimestamp / 1000),
       content: content.trim(),
-      attachments: await Promise.all(
-        msg.attachments
-          .map(async (attachment) => await extractChart(attachment.url))
-          .filter(Boolean),
-      ),
+      attachments,
       reference: msg.reference?.messageId?.slice(-4),
     });
     console.log(
