@@ -1,0 +1,32 @@
+import { binance, type KlineData, type Interval } from "./binance";
+import { BollingerBands, BollingerBandsWidth, EMA, MACD, MOM, RSI, SMA, StochasticOscillator } from 'trading-signals';
+
+type PriceData = {
+    symbol: string;
+    timeframe: Interval;
+    price: KlineData[];
+    indicators: Indicators;
+    
+}
+type Indicators = {
+    sma: SMA;
+    ema: EMA;
+    rsi: RSI;
+    stochasticOscillator: StochasticOscillator;
+    macd: MACD;
+    momentum: MOM;
+    bollingerBands: BollingerBands;
+    bollingerBandsWidth: BollingerBandsWidth;
+}
+
+export class MarketEngine {
+    coin: string;
+    binance = binance;
+    priceHistory:KlineData[] = [];
+    
+    constructor(coin: string) {
+        this.coin = coin;
+    }
+
+    
+}

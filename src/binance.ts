@@ -1,4 +1,7 @@
-import { DerivativesTradingUsdsFutures } from "@binance/derivatives-trading-usds-futures";
+import {
+  DerivativesTradingUsdsFutures,
+  DerivativesTradingUsdsFuturesRestAPI,
+} from "@binance/derivatives-trading-usds-futures";
 import EventEmitter from "events";
 
 type TickerStreamMessage = {
@@ -22,6 +25,19 @@ type TickerStreamMessage = {
   n: number;
   ps: string;
 };
+export type KlineData = {
+  openTime: Date;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  closeTime: Date;
+  pairVolume: number;
+  numberOfTrades: number;
+  takerBuyBaseAssetVolume: number;
+  takerBuyQuoteAssetVolume: number;
+};
 
 interface BinanceEvents {
   price: (newPrice: {
@@ -40,7 +56,9 @@ export class Binance extends EventEmitter {
     ReturnType<DerivativesTradingUsdsFutures["websocketStreams"]["connect"]>
   > | null = null;
   private wsConnectionPromise: Promise<
-    Awaited<ReturnType<DerivativesTradingUsdsFutures["websocketStreams"]["connect"]>>
+    Awaited<
+      ReturnType<DerivativesTradingUsdsFutures["websocketStreams"]["connect"]>
+    >
   > | null = null;
 
   private activeStreams: Set<string> = new Set();
@@ -88,7 +106,8 @@ export class Binance extends EventEmitter {
       this.wsConnection = await this.wsConnectionPromise;
     }
 
-    if (this.activeStreams.has(symbol) || this.streamHandles.has(symbol)) return;
+    if (this.activeStreams.has(symbol) || this.streamHandles.has(symbol))
+      return;
 
     this.activeStreams.add(symbol);
 
@@ -129,23 +148,53 @@ export class Binance extends EventEmitter {
       });
     }
   }
-
+  async getPriceHistory(
+    symbol: string,
+    interval: DerivativesTradingUsdsFuturesRestAPI.KlineCandlestickDataIntervalEnum,
+    limit: number,
+  ) {
+    return (
+      await (
+        await this.client.restAPI.klineCandlestickData({
+          symbol,
+          interval,
+          limit,
+        })
+      ).data()
+    ).map(this.parseKlineData);
+  }
+  private parseKlineData(data: (string | number)[]) {
+    const object: KlineData = {
+      openTime: new Date(data[0] as number),
+      open: Number(data[1]),
+      high: Number(data[2]),
+      low: Number(data[3]),
+      close: Number(data[4]),
+      volume: Number(data[5]),
+      closeTime: new Date(data[6] as number),
+      pairVolume: Number(data[7]),
+      numberOfTrades: data[8] as number,
+      takerBuyBaseAssetVolume: Number(data[9]),
+      takerBuyQuoteAssetVolume: Number(data[10]),
+    };
+    return object;
+  }
   public async searchCoin(keyword: string) {
-    if (keyword.toLowerCase().includes("gold")) return "XAUUSDT";
-    else if (keyword.toLowerCase().includes("silver")) return "XAGUSDT";
-    else if (keyword.toLowerCase().includes("oil")) return "CLUSDT";
+    if (keyword.toLowerCase().includes("gold")) return ["XAUUSDT"];
+    else if (keyword.toLowerCase().includes("silver")) return ["XAGUSDT"];
+    else if (keyword.toLowerCase().includes("oil")) return ["CLUSDT"];
     else if (
       keyword.toLowerCase().includes("bitcoin") ||
       keyword.toLowerCase().includes("btc")
     )
-      return "BTCUSDT";
+      return ["BTCUSDT"];
     else if (
       keyword.toLowerCase().includes("ethereum") ||
       keyword.toLowerCase().includes("eth")
     )
-      return "ETHUSDT";
+      return ["ETHUSDT"];
     const allCoins = await this.listCoins();
-    const symbols = allCoins.map((c) => c.symbol);
+    const symbols = allCoins.map((c) => c.symbol || "").filter(Boolean);
 
     const query = keyword.toUpperCase().trim();
 
@@ -154,8 +203,7 @@ export class Binance extends EventEmitter {
     const tryMatch = (q: string) => {
       const norm = normalize(q);
 
-      return allCoins.filter((c) => {
-        const symbol = c?.symbol ?? "";
+      return symbols.filter((symbol) => {
         return symbol.includes(q) || symbol.includes(norm);
       });
     };
@@ -171,11 +219,11 @@ export class Binance extends EventEmitter {
       const res = tryMatch(token);
 
       for (const coin of res) {
-        matched.set(coin.symbol || "", coin);
+        matched.set(coin || "", coin);
       }
     }
 
-    return Array.from(matched.values()).map((c) => c.symbol);
+    return Array.from(matched.values()); //.map((c) => c.symbol);
   }
 
   public async listCoins() {
@@ -212,5 +260,12 @@ async function run() {
     await binance.subscribe(first);
   }
 }
-
+export const Interval =
+  DerivativesTradingUsdsFuturesRestAPI.KlineCandlestickDataIntervalEnum;
+export type Interval =
+  DerivativesTradingUsdsFuturesRestAPI.KlineCandlestickDataIntervalEnum;
 //run();
+binance
+  .getPriceHistory("LTCUSDT", Interval.INTERVAL_5m, 10)
+  .then(console.log)
+  .catch(console.error);

@@ -306,3 +306,11 @@ Rules:
 	const raw = response.choices[0]?.message.content || "";
 	return safeJSONParse<ChartCheckResult>(raw);
 }
+
+
+export async function getCreditsUsage() {
+  const credits = await openRouter.credits.getCredits()
+  console.log(credits.data);
+}
+
+getCreditsUsage()

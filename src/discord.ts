@@ -192,7 +192,7 @@ export async function scrapeMessages(message: Message) {
       ),
     )).filter(Boolean);
 
-    if(attachments.length == 0) continue;
+    //if(attachments.length == 0) continue;
     console.log(`Extracting chart...`);
     result.push({
       id: msg.id.slice(-5),

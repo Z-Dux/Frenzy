@@ -11,4 +11,8 @@ botClient.once(Events.ClientReady, (readyClient) => {
   listenLive();
 });
 
+botClient.on(Events.MessageCreate, async (message) => {
+  
+})
+
 botClient.login(config.DISCORD_BOT_TOKEN);
