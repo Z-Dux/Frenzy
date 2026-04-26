@@ -11,17 +11,17 @@ Frenzy is a Bun + TypeScript project for ingesting trading discussions from Disc
 > [!NOTE]
 > **[Bun](https://bun.sh) is suggested to run this!**
 
-### - OCR Server
+> ### OCR Server
 ```bash
 pip install -r requirements.txt
 ```
 
-### Frenzy Dependencies
+> ### Frenzy Dependencies
 ```bash
 bun install
 ```
 ------------------------------------
-### `.env` File Configuration
+> ### `.env` Configuration
 
 ```env
 DISCORD_TOKEN= # Discord User account token
@@ -31,7 +31,7 @@ OPENROUTER_API_KEY= # openrouter api key
 MONGODB_URI= # mongo db url
 ```
 
-### `config.ts` configuration
+> ### `config.ts` Configuration
 ```ts
 export const config = {
   token: process.env.DISCORD_TOKEN || "",
