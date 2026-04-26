@@ -3,8 +3,10 @@
 > [!WARNING]
 > This project includes automation around Discord account activity. Automating Discord accounts can violate Discord Terms of Service. We do not promote, encourage, or endorse violating Discord ToS.
 
-## What This Project Does
-Frenzy is a Bun + TypeScript project for ingesting trading discussions from Discord, extracting chart context, analyzing trade intent through LLMs, and syncing market data from Binance. It also supports pushing output to a Discord bot flow and persisting trade-related data through MikroORM.
+## What's this?
+Frenzy is a completely automated trading agent capable of ingesting general chat messages from social media, analysing them through LLMs, syncing with market data and performing trades.
+
+![Frenzy flow](flow.png)
 
 ## Installation
 
@@ -40,7 +42,7 @@ export const config = {
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
   DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN || "",
   tradeLog: "1496571283930878092", // <============= Main Channel to log ===========
-  liveTrade: "1496575116027498677", // <============ Channel where live portfolio will be presented ===========
+  liveTrade: "1496575116027498677", // <============ Channel where live portfolio will be presented ====
   portfolioLog: { // <=========================== Trade status logs ===========
     create: "1496571337295266102",
     open: "1496571303002374215",
