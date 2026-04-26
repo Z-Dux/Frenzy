@@ -3,6 +3,7 @@ import {
   DerivativesTradingUsdsFuturesRestAPI,
 } from "@binance/derivatives-trading-usds-futures";
 import EventEmitter from "events";
+import { dateToRelative } from "./utils";
 
 type TickerStreamMessage = {
   e: "24hrTicker";
@@ -25,6 +26,27 @@ type TickerStreamMessage = {
   n: number;
   ps: string;
 };
+type KlineStreamMessage = {
+  e: "kline";
+  E: number;
+  s: string;
+  k: {
+    t: number; // open time
+    T: number; // close time
+    s: string;
+    i: string; // interval
+    o: string;
+    c: string;
+    h: string;
+    l: string;
+    v: string;
+    n: number;
+    x: boolean; // is closed
+    q: string;
+    V: string;
+    Q: string;
+  };
+};
 export type KlineData = {
   openTime: Date;
   open: number;
@@ -46,6 +68,12 @@ interface BinanceEvents {
     high: number;
     low: number;
     change: number;
+  }) => void;
+  kline: (data: {
+    symbol: string;
+    interval: string;
+    kline: KlineData;
+    isClosed: boolean;
   }) => void;
   nameChange: (newName: string) => void;
 }
@@ -127,7 +155,62 @@ export class Binance extends EventEmitter {
       this.coinPrices.set(ticker.s, Number(ticker.c));
     });
   }
+  public async subscribeKline(
+    coin: string,
+    interval: DerivativesTradingUsdsFuturesRestAPI.KlineCandlestickDataIntervalEnum,
+  ) {
+    const symbol = coin.toLowerCase();
+    const streamKey = `${symbol}_${interval}`;
+    if (!this.wsConnection) {
+      this.wsConnectionPromise ??= this.client.websocketStreams
+        .connect()
+        .then((connection) => {
+          this.wsConnection = connection;
+          this.wsConnectionPromise = null;
+          return connection;
+        });
+      this.wsConnection = await this.wsConnectionPromise;
+    }
 
+    if (this.activeStreams.has(streamKey)) return;
+    console.log(`Subscribing to kline for ${coin} at interval ${interval}`);
+    this.activeStreams.add(streamKey);
+
+    const stream = this.wsConnection.klineCandlestickStreams({
+      symbol: symbol.toLowerCase(),
+      interval,
+      //contractType: "PERPETUAL",
+    });
+
+    this.streamHandles.set(streamKey, stream);
+
+    stream.on("message", (data: unknown) => {
+      console.log("Received kline data:", data);
+      const msg = data as KlineStreamMessage;
+      const k = msg.k;
+
+      const parsed: KlineData = {
+        openTime: new Date(k.t),
+        open: Number(k.o),
+        high: Number(k.h),
+        low: Number(k.l),
+        close: Number(k.c),
+        volume: Number(k.v),
+        closeTime: new Date(k.T),
+        pairVolume: Number(k.q),
+        numberOfTrades: k.n,
+        takerBuyBaseAssetVolume: Number(k.V),
+        takerBuyQuoteAssetVolume: Number(k.Q),
+      };
+
+      this.emit("kline", {
+        symbol: msg.s,
+        interval: k.i,
+        kline: parsed,
+        isClosed: k.x,
+      });
+    });
+  }
   public unsubscribe(coin: string) {
     console.log(`Unsubscribing from ${coin}`);
     const symbol = coin.toLowerCase();
@@ -264,8 +347,14 @@ export const Interval =
   DerivativesTradingUsdsFuturesRestAPI.KlineCandlestickDataIntervalEnum;
 export type Interval =
   DerivativesTradingUsdsFuturesRestAPI.KlineCandlestickDataIntervalEnum;
+
 //run();
-binance
+/*binance
   .getPriceHistory("LTCUSDT", Interval.INTERVAL_5m, 10)
   .then(console.log)
   .catch(console.error);
+*/
+binance.subscribeKline("BTCUSDT", Interval.INTERVAL_1m).catch(console.error);
+binance.on("kline", (data) => {
+  console.log(data);
+});

@@ -9,12 +9,12 @@ type PriceData = {
     
 }
 type Indicators = {
+    rsi: RSI;
+    momentum: MOM;
+    macd: MACD;
     sma: SMA;
     ema: EMA;
-    rsi: RSI;
     stochasticOscillator: StochasticOscillator;
-    macd: MACD;
-    momentum: MOM;
     bollingerBands: BollingerBands;
     bollingerBandsWidth: BollingerBandsWidth;
 }
@@ -27,6 +27,7 @@ export class MarketEngine {
     constructor(coin: string) {
         this.coin = coin;
     }
+    
 
     
 }
