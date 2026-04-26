@@ -11,7 +11,7 @@ Frenzy is a Bun + TypeScript project for ingesting trading discussions from Disc
 > [!NOTE]
 > **[Bun](https://bun.sh) is suggested to run this!**
 
-### OCR Server
+### - OCR Server
 ```bash
 pip install -r requirements.txt
 ```
@@ -20,7 +20,7 @@ pip install -r requirements.txt
 ```bash
 bun install
 ```
-
+------------------------------------
 ### `.env` File Configuration
 
 ```env
@@ -39,8 +39,8 @@ export const config = {
   discordServers: [ ], // <=========================== ID of Discord Servers to scan ===========
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
   DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN || "",
-  tradeLog: "1496571283930878092", // <=========================== Main Channel to log ===========
-  liveTrade: "1496575116027498677", // <=========================== Channel where live portfolio will be presented ===========
+  tradeLog: "1496571283930878092", // <============= Main Channel to log ===========
+  liveTrade: "1496575116027498677", // <============ Channel where live portfolio will be presented ===========
   portfolioLog: { // <=========================== Trade status logs ===========
     create: "1496571337295266102",
     open: "1496571303002374215",
@@ -51,7 +51,7 @@ export const config = {
 
 export const tradeConfig = {
   leverage: 10, // <=========================== Maximum leverage ===========
-  riskPerTrade: 0.05, // <=========================== Maximum portfolio % risk ===========
+  riskPerTrade: 0.05, // <===================== Maximum portfolio % risk ===========
 };
 ```
 
