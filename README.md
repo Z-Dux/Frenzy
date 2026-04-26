@@ -3,45 +3,71 @@
 > [!WARNING]
 > This project includes automation around Discord account activity. Automating Discord accounts can violate Discord Terms of Service. We do not promote, encourage, or endorse violating Discord ToS.
 
-## Overview
-Frenzy is a Bun + TypeScript trading workflow project that:
-- Monitors Discord messages.
-- Extracts and analyzes chart data.
-- Uses AI providers for trade interpretation.
-- Tracks market data from Binance.
-- Sends updates through a Discord bot.
+## What This Project Does
+Frenzy is a Bun + TypeScript project for ingesting trading discussions from Discord, extracting chart context, analyzing trade intent through LLMs, and syncing market data from Binance. It also supports pushing output to a Discord bot flow and persisting trade-related data through MikroORM.
 
-## Tech Stack
-- Bun + TypeScript
-- Discord clients (`discord.js`, `discord.js-selfbot-v13`)
-- Binance futures API
-- OCR service (PaddleOCR endpoint)
-- PostgreSQL via MikroORM
+## Installation
 
-## Setup
-1. Install dependencies:
+> [!NOTE]
+> **[Bun](https://bun.sh) is suggested to run this!**
 
+### OCR Server
+```bash
+pip install -r requirements.txt
+```
+
+### Frenzy Dependencies
 ```bash
 bun install
 ```
 
-2. Create a `.env` file in the project root with:
+### `.env` File Configuration
 
 ```env
-DISCORD_TOKEN=
-DISCORD_BOT_TOKEN=
-GROQ_API_KEY=
-OPENROUTER_API_KEY=
-MONGODB_URI=
+DISCORD_TOKEN= # Discord User account token
+DISCORD_BOT_TOKEN= # Discord bot token
+GROQ_API_KEY= # Groq api key
+OPENROUTER_API_KEY= # openrouter api key
+MONGODB_URI= # mongo db url
 ```
 
+### `config.ts` configuration
+```ts
+export const config = {
+  token: process.env.DISCORD_TOKEN || "",
+  GROQ_API_KEY: process.env.GROQ_API_KEY || "",
+  discordServers: [ ], // <=========================== ID of Discord Servers to scan ===========
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
+  DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN || "",
+  tradeLog: "1496571283930878092", // <=========================== Main Channel to log ===========
+  liveTrade: "1496575116027498677", // <=========================== Channel where live portfolio will be presented ===========
+  portfolioLog: { // <=========================== Trade status logs ===========
+    create: "1496571337295266102",
+    open: "1496571303002374215",
+    close: "1496571314369073154",
+  },
+  MONGODB_URI: process.env.MONGODB_URI || "",
+};
+
+export const tradeConfig = {
+  leverage: 10, // <=========================== Maximum leverage ===========
+  riskPerTrade: 0.05, // <=========================== Maximum portfolio % risk ===========
+};
+```
+
+------------------------------------
 ## Run
-Start the app:
+Start the PaddleOCR server first:
+
+```bash
+uvicorn paddleOCR:app --host 127.0.0.1 --port 8000
+```
+
+Then, in a separate terminal, start the app with:
 
 ```bash
 bun run src/index.ts
 ```
 
-## Notes
-- Ensure your OCR service is reachable at `http://127.0.0.1:8000/parse-chart`.
-- Configure database and Discord server/channel IDs in `config.ts` as needed.
+## Environment Notes
+The OCR service is expected at `http://127.0.0.1:8000/parse-chart`. Discord server and channel IDs, along with runtime constants, are configured in `config.ts`.

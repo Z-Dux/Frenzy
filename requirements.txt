@@ -1,0 +1,7 @@
+fastapi
+pydantic
+requests
+numpy
+opencv-python
+paddleocr
+uvicorn[standard]
