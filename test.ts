@@ -1,97 +1,121 @@
-import { OpenRouter } from "@openrouter/sdk";
-import { config } from "./config";
+import { writeFileSync } from "fs";
 
-const openRouter = new OpenRouter({
-	apiKey: config.OPENROUTER_API_KEY,
-});
-
-type ChartCheckResult = {
-	isStockChart: boolean;
-	confidence: number;
+export type KlineData = {
+  openTime: Date;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  closeTime: Date;
 };
-
-function extractJSON(text: string): string | null {
-	const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-	if (codeBlockMatch) return codeBlockMatch[1] || null;
-
-	const jsonMatch = text.match(/\{[\s\S]*\}/);
-	if (jsonMatch) return jsonMatch[0];
-
-	return null;
+export interface KeyZone {
+  min: number;
+  max: number;
+  mid: number;
+  score: number; // Based on number of pivots in cluster
 }
 
-function safeParseResult(text: string): ChartCheckResult {
-	const fallback: ChartCheckResult = {
-		isStockChart: false,
-		confidence: 0,
-	};
+class Day0Analyzer {
+  /**
+   * Agglomerative Clustering Logic:
+   * 1. Extract all fractal pivots (Highs and Lows).
+   * 2. Group pivots that are within 'mergePercent' of each other.
+   * 3. Calculate the median price for each cluster to define the level.
+   */
+  public static findLevels(data: KlineData[], mergePercent: number = 0.002): KeyZone[] {
+    const pivots: number[] = [];
 
-	const extracted = extractJSON(text);
-	if (!extracted) return fallback;
+    // 1. Identify Raw Pivots (Fractals)
+    for (let i = 5; i < data.length - 5; i++) {
+      const high = data[i].high;
+      const low = data[i].low;
+      if (data.slice(i - 3, i + 3).every(k => high >= k.high)) pivots.push(high);
+      if (data.slice(i - 3, i + 3).every(k => low <= k.low)) pivots.push(low);
+    }
 
-	try {
-		const parsed = JSON.parse(extracted) as Partial<ChartCheckResult>;
-		return {
-			isStockChart: Boolean(parsed.isStockChart),
-			confidence:
-				typeof parsed.confidence === "number"
-					? Math.max(0, Math.min(1, parsed.confidence))
-					: 0,
-		};
-	} catch {
-		return fallback;
-	}
+    // 2. Simple Agglomerative Clustering
+    const zones: KeyZone[] = [];
+    pivots.sort((a, b) => a - b).forEach(price => {
+      const lastZone = zones[zones.length - 1];
+      // If price is within the merge percentage of the existing zone
+      if (lastZone && (price - lastZone.mid) / lastZone.mid <= mergePercent) {
+        lastZone.max = price;
+        lastZone.mid = (lastZone.min + lastZone.max) / 2;
+        lastZone.score++;
+      } else {
+        zones.push({ min: price, max: price, mid: price, score: 1 });
+      }
+    });
+
+    // 3. Filter for 'Strong' levels (at least 3 pivots merged)
+    return zones
+      .filter(z => z.score >= 3)
+      .sort((a, b) => b.score - a.score);
+  }
+
+  public static plot(data: KlineData[], zones: KeyZone[]) {
+    const chartData = data.map(k => ({
+      time: Math.floor(k.openTime.getTime() / 1000) as any,
+      open: k.open, high: k.high, low: k.low, close: k.close
+    }));
+
+    const html = `<!DOCTYPE html>
+    <html>
+    <head>
+        <title>Day0 S/R Clusters</title>
+        <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+        <style>body { background: #0c0d10; margin: 0; padding: 0; }</style>
+    </head>
+    <body>
+        <div id="chart" style="height: 100vh; width: 100vw;"></div>
+        <script>
+            const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+                layout: { background: { color: '#0c0d10' }, textColor: '#d1d4dc' },
+                grid: { vertLines: { visible: false }, horzLines: { color: '#1f222d' } },
+            });
+
+            const candleSeries = chart.addCandlestickSeries({
+                upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
+            });
+            candleSeries.setData(${JSON.stringify(chartData)});
+
+            const zones = ${JSON.stringify(zones)};
+            const currentPrice = ${data[data.length - 1].close};
+
+            zones.forEach((zone, i) => {
+                const isSupply = zone.mid > currentPrice;
+                const color = isSupply ? 'rgba(239, 83, 80, 0.4)' : 'rgba(38, 166, 154, 0.4)';
+                
+                // Draw the Box boundaries
+                [zone.min, zone.max].forEach(p => {
+                    candleSeries.createPriceLine({
+                        price: p, color: color, lineWidth: 1, lineStyle: 0, axisLabelVisible: false,
+                    });
+                });
+
+                // Draw the actual trading level (Midline)
+                candleSeries.createPriceLine({
+                    price: zone.mid,
+                    color: color.replace('0.4', '0.8'),
+                    lineWidth: 2,
+                    lineStyle: 0,
+                    axisLabelVisible: true,
+                    title: (isSupply ? 'RES' : 'SUP') + ' (Score: ' + zone.score + ')',
+                });
+            });
+            chart.timeScale().fitContent();
+        </script>
+    </body>
+    </html>`;
+
+    writeFileSync("chart.html", html);
+    console.log("✅ day0market logic applied! Ranges are color-highlighted.");
+  }
 }
 
-export async function isStockChartImage(imageUrl: string) {
-	const prompt = `You are an image classifier.
-Decide if the image is a STOCK MARKET CHART/GRAPH (candlesticks/line chart with price-time axes or trading chart UI).
-
-Return ONLY JSON with this exact schema:
-{
-	"isStockChart": boolean,
-	"confidence": number,
-}
-
-Rules:
-- confidence must be from 0 to 1.
-- STRICTLY must identify price or time axes and candles!
-- If uncertain, set isStockChart=false.
-- No markdown, no extra text.`;
-
-	const response = await openRouter.chat.send({
-		chatRequest: {
-			model: "qwen/qwen3.5-flash-02-23",
-			temperature: 0.1,
-			messages: [
-				{ role: "system", content: prompt },
-				{
-					role: "user",
-					content: [
-						{ type: "image_url", imageUrl: { url: imageUrl } },
-					],
-				},
-			],
-		},
-	});
-
-	const raw = response.choices[0]?.message.content || "";
-	return safeParseResult(raw);
-}
-
-// Example run:
-async function main() {
-	const imageUrl = `https://cdn.discordapp.com/attachments/1249330346126872647/1496559067488063689/IMG_0947.png?ex=69ea52be&is=69e9013e&hm=36665ce3a0496e0b1330a095faa0f4faa1db93f42a448248bb7cb8c1d75ff19c`
-	if (!imageUrl) {
-		console.error("Usage: bun run test.ts <image-url>");
-		process.exit(1);
-	}
-
-	const result = await isStockChartImage(imageUrl);
-	console.log(result);
-}
-
-main().catch((err) => {
-	console.error("Error checking chart image:", err);
-	process.exit(1);
-});
+// --- Run ---
+import { binance, Interval } from "./src/binance";
+const klines = await binance.getPriceHistory("BTCUSDT", Interval.INTERVAL_1m, 1000);
+const levels = Day0Analyzer.findLevels(klines, 0.0015); // 0.15% merge distance
+Day0Analyzer.plot(klines, levels.slice(0, 8));

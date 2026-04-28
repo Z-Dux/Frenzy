@@ -59,6 +59,12 @@ export type KlineData = {
   numberOfTrades: number;
   takerBuyBaseAssetVolume: number;
   takerBuyQuoteAssetVolume: number;
+  isClosed: boolean;
+};
+export type KlineDataStream = {
+  symbol: string;
+  interval: string;
+  kline: KlineData;
 };
 
 interface BinanceEvents {
@@ -69,12 +75,7 @@ interface BinanceEvents {
     low: number;
     change: number;
   }) => void;
-  kline: (data: {
-    symbol: string;
-    interval: string;
-    kline: KlineData;
-    isClosed: boolean;
-  }) => void;
+  kline: (data: KlineDataStream) => void;
   nameChange: (newName: string) => void;
 }
 
@@ -201,13 +202,13 @@ export class Binance extends EventEmitter {
         numberOfTrades: k.n,
         takerBuyBaseAssetVolume: Number(k.V),
         takerBuyQuoteAssetVolume: Number(k.Q),
+        isClosed: k.x,
       };
 
       this.emit("kline", {
         symbol: msg.s,
         interval: k.i,
         kline: parsed,
-        isClosed: k.x,
       });
     });
   }
@@ -259,6 +260,7 @@ export class Binance extends EventEmitter {
       numberOfTrades: data[8] as number,
       takerBuyBaseAssetVolume: Number(data[9]),
       takerBuyQuoteAssetVolume: Number(data[10]),
+      isClosed: true,
     };
     return object;
   }
@@ -353,8 +355,9 @@ export type Interval =
   .getPriceHistory("LTCUSDT", Interval.INTERVAL_5m, 10)
   .then(console.log)
   .catch(console.error);
-*/
-binance.subscribeKline("BTCUSDT", Interval.INTERVAL_1m).catch(console.error);
-binance.on("kline", (data) => {
-  console.log(data);
-});
+  binance.subscribeKline("BTCUSDT", Interval.INTERVAL_1m).catch(console.error);
+  binance.on("kline", (data) => {
+    console.log(data);
+  });
+  
+  */
