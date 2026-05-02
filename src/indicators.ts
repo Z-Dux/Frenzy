@@ -27,7 +27,7 @@ type Indicators = {
   bollingerBands: BollingerBands;
   bollingerBandsWidth: BollingerBandsWidth;
 };
-
+let last = new Date();
 export class MarketEngine {
   coin: string;
   binance = binance;
@@ -98,7 +98,7 @@ export class MarketEngine {
     });
     this.displayIndicatorResults();
   }
-  displayIndicatorResults() {
+  async displayIndicatorResults() {
     const rsi = this.indicators.rsi.getResult();
     const momentum = this.indicators.momentum.getResult();
     const macd = this.indicators.macd.getResult();
@@ -108,7 +108,7 @@ export class MarketEngine {
     const stoch = this.indicators.stochasticOscillator.getResult();
     const bb = this.indicators.bollingerBands.getResult();
     const bbWidth = this.indicators.bollingerBandsWidth.getResult();
-    console.log("RSI:", rsi);
+    /*console.log("RSI:", rsi);
     console.log("Momentum:", momentum);
     console.log("MACD:", macd);
     console.log("SMA20:", sma20);
@@ -116,8 +116,49 @@ export class MarketEngine {
     console.log("EMA:", ema);
     console.log("Stochastic Oscillator:", stoch);
     console.log("Bollinger Bands:", bb);
-    console.log("Bollinger Bands Width:", bbWidth);
+    console.log("Bollinger Bands Width:", bbWidth);*/
     console.log("------");
+
+    const chartData = this.priceHistory.map((p) => ({
+      time: p.openTime.getTime() / 1000,
+      open: p.open,
+      high: p.high,
+      low: p.low,
+      close: p.close,
+    }));
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${this.coin} Chart Export</title>
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        body { background: #131722; color: white; font-family: sans-serif; margin: 0; }
+        #chart { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="chart"></div>
+    <script>
+        const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+            layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
+            grid: { vertLines: { color: '#2B2B43' }, horzLines: { color: '#2B2B43' } },
+        });
+        const candleSeries = chart.addCandlestickSeries();
+        const data = ${JSON.stringify(chartData)};
+        candleSeries.setData(data);
+        chart.timeScale().fitContent();
+    </script>
+</body>
+</html>`;
+    if (Math.abs(last.getTime() - new Date().getTime()) > 10000) {
+      // Limit exports to once every 10 seconds
+      last = new Date();
+
+      await Bun.write("chart_export.html", htmlContent);
+      console.log("📈 Chart saved to chart_export.html");
+    }
   }
 }
 const engine = new MarketEngine("BTCUSDT");
