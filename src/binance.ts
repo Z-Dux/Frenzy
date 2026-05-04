@@ -2,7 +2,7 @@ import {
   DerivativesTradingUsdsFutures,
   DerivativesTradingUsdsFuturesRestAPI,
 } from "@binance/derivatives-trading-usds-futures";
-import EventEmitter from "eventemitter3";
+import EventEmitter from "events";
 import { dateToRelative } from "./utils";
 
 type TickerStreamMessage = {
@@ -79,7 +79,7 @@ interface BinanceEvents {
   nameChange: (newName: string) => void;
 }
 
-export class Binance extends EventEmitter<BinanceEvents> {
+export class Binance extends EventEmitter {
   private client: DerivativesTradingUsdsFutures;
   private wsConnection: Awaited<
     ReturnType<DerivativesTradingUsdsFutures["websocketStreams"]["connect"]>
@@ -93,7 +93,7 @@ export class Binance extends EventEmitter<BinanceEvents> {
   private activeStreams: Set<string> = new Set();
   private streamHandles = new Map<string, { unsubscribe: () => void }>();
   coinPrices: Map<string, number> = new Map();
-  /*override on<K extends keyof BinanceEvents>(
+  override on<K extends keyof BinanceEvents>(
     event: K,
     listener: BinanceEvents[K],
   ): this {
@@ -105,7 +105,7 @@ export class Binance extends EventEmitter<BinanceEvents> {
     ...args: Parameters<BinanceEvents[K]>
   ): boolean {
     return super.emit(event, ...args);
-  }*/
+  }
 
   constructor() {
     super();
