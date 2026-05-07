@@ -7,7 +7,7 @@
 Frenzy is a completely automated trading agent capable of ingesting general chat messages from social media, analysing them through LLMs, syncing with market data and performing trades.
 
 ![Frenzy flow](flow.png)
-
+> Current workflow given above is inclusive of only existing features in production!
 ## Installation
 
 > [!NOTE]
@@ -70,6 +70,16 @@ Then, in a separate terminal, start the app with:
 ```bash
 bun run src/index.ts
 ```
+
+## TODO List
+
+- [x] Discord Users trade/market sentiment analyser
+- [ ] Technical Indicator analyser (AI model)
+- [ ] ForexFactory/Bloomberg/FinHub News Listener
+- [ ] Youtube Live Stream analyser
+- [ ] Multi-agent conversational trade decision picker
+- [ ] Reddit/Telegram
+- [ ] [Hyperdash](hyperdash.com) data scraper & aggregator
 
 ## Environment Notes
 The OCR service is expected at `http://127.0.0.1:8000/parse-chart`. Discord server and channel IDs, along with runtime constants, are configured in `config.ts`.
