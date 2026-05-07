@@ -186,7 +186,7 @@ export class Binance extends EventEmitter {
     this.streamHandles.set(streamKey, stream);
 
     stream.on("message", (data: unknown) => {
-      console.log("Received kline data:", data);
+      //console.log("Received kline data:", data);
       const msg = data as KlineStreamMessage;
       const k = msg.k;
 

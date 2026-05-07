@@ -9,6 +9,7 @@ import {
   SMA,
   StochasticOscillator,
 } from "trading-signals";
+import { ElliottWaveIdentifier } from "./indicators/elliotWave";
 
 type PriceData = {
   symbol: string;
@@ -28,6 +29,10 @@ type Indicators = {
   bollingerBandsWidth: BollingerBandsWidth;
 };
 
+type CustomIndicators = {
+  elliotWave: ElliottWaveIdentifier;
+};
+
 export class MarketEngine {
   coin: string;
   binance = binance;
@@ -43,6 +48,9 @@ export class MarketEngine {
     stochasticOscillator: new StochasticOscillator(14, 3, 3),
     bollingerBands: new BollingerBands(20, 2),
     bollingerBandsWidth: new BollingerBandsWidth(new BollingerBands(20, 2)),
+  };
+  customIndicators: CustomIndicators = {
+    elliotWave: new ElliottWaveIdentifier(180),
   };
   constructor(coin: string) {
     this.indicators.bollingerBandsWidth = new BollingerBandsWidth(
@@ -69,11 +77,13 @@ export class MarketEngine {
     console.log(
       this.priceHistory.length,
       "candles in history. New price:",
-      price,
+      price.close,
+      (price.closeTime).toLocaleTimeString(`en-US`, { timeStyle: "short", hour12: false }),
     );
-    if (price.isClosed || this.priceHistory.length === 0)
+    if (price.isClosed || this.priceHistory.length === 0) {
       this.priceHistory.push(price);
-    else {
+      if (this.priceHistory.length > 1000) this.priceHistory.shift();
+    } else {
       let last = this.priceHistory[this.priceHistory.length - 1];
       if (last && last.isClosed) {
         this.priceHistory.push(price);
@@ -96,6 +106,13 @@ export class MarketEngine {
         indicator.add(data as never);
       }
     });
+    if (isClosed) {
+      const res = this.customIndicators.elliotWave.update(this.priceHistory);
+      if (res.waves.length > 0) {
+        console.log("Elliot Waves:", res.waves);
+      }
+      
+    }
     this.displayIndicatorResults();
   }
   displayIndicatorResults() {
@@ -108,6 +125,7 @@ export class MarketEngine {
     const stoch = this.indicators.stochasticOscillator.getResult();
     const bb = this.indicators.bollingerBands.getResult();
     const bbWidth = this.indicators.bollingerBandsWidth.getResult();
+    return;
     console.log("RSI:", rsi);
     console.log("Momentum:", momentum);
     console.log("MACD:", macd);
