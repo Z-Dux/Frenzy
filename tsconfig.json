@@ -25,6 +25,19 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
+    "noPropertyAccessFromIndexSignature": false,
+
+    // Path aliases
+    "baseUrl": ".",
+    "paths": {
+      "@config/*": ["config/*"],
+      "@db/*": ["src/db/*"],
+      "@core/*": ["src/core/*"],
+      "@exchange/*": ["src/exchange/*"],
+      "@ai/*": ["src/ai/*"],
+      "@analysis/*": ["src/analysis/*"],
+      "@discord/*": ["src/discord/*"],
+      "@shared/*": ["src/shared/*"]
+    }
   }
 }

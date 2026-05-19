@@ -1,15 +1,14 @@
 import { Client, Message } from "discord.js-selfbot-v13";
-import { config } from "../config";
+import { config } from "@config/app";
 import { sleep } from "bun";
-import { isTradingBased } from "./groq";
-import { extractChart } from "./chartParser";
-import { processMessage } from "./openrouter";
-import { sendTrade } from "./discordBot/utils";
-import { binance } from "./binance";
-import { orm } from "./database";
-import { TradeAnalysisSchema } from "./schema/tradeAnalysis";
-import { trader } from "./trader";
-import { ChannelType } from "discord.js";
+import { isTradingBased } from "@ai/groq";
+import { extractChart } from "@analysis/chartParser";
+import { processMessage } from "@ai/openrouter";
+import { sendTrade } from "@discord/bot/handlers";
+import { binance } from "@exchange/binance";
+import { orm } from "@db/index";
+import { TradeAnalysisSchema } from "@db/schema";
+import { trader } from "@core/trader";
 
 export const client = new Client();
 
@@ -59,27 +58,37 @@ client.on("messageCreate", async (message) => {
 
   console.log(`→ Analysed trade from ${message.author.tag}:`, analysedTrade);
 
-  analysedTrade.asset = analysedTrade.asset
-    ? (await binance.searchCoin(analysedTrade.asset || ""))[0] ||
-      analysedTrade.asset
-    : null;
+  // Resolve asset symbol if provided
+  if (analysedTrade.asset) {
+    const [resolvedAsset] = await binance.searchCoin(analysedTrade.asset);
+    analysedTrade.asset = resolvedAsset || analysedTrade.asset;
+  }
+  
   console.log(`→ Mapped asset: ${analysedTrade.asset}`);
+  
   if (analysedTrade.confidence < 0.5) return;
-  sendTrade(analysedTrade as any, message);
+  
+  // Early exit if no valid trade data
   if (
-    !(
-      analysedTrade.has_trade &&
-      (analysedTrade.entry || analysedTrade.order_type == `market`) &&
-      analysedTrade.stop_loss &&
-      analysedTrade.asset
-    )
-  )
+    !analysedTrade.has_trade ||
+    !(analysedTrade.entry || analysedTrade.order_type === "market") ||
+    !analysedTrade.stop_loss ||
+    !analysedTrade.asset
+  ) {
+    sendTrade(analysedTrade as any, message);
     return;
+  }
+
+  sendTrade(analysedTrade as any, message);
+
+  // Get current price and process active trade
   const currentPrice =
     analysedTrade.current_price ||
     (await binance.getPrice(analysedTrade.asset));
+
   if (analysedTrade.action === "pending") {
-    if (!analysedTrade.type || !analysedTrade.asset) return;
+    if (!analysedTrade.type) return;
+    
     await trader.addTrade(
       {
         asset: analysedTrade.asset,

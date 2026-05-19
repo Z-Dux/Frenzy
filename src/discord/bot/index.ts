@@ -1,6 +1,6 @@
 import { Client, Events, GatewayIntentBits } from "discord.js";
-import { config } from "../../config";
-import { listenLive } from "./live";
+import { config } from "@config/app";
+import { listenLive } from "./handlers";
 
 export const botClient = new Client({
   intents: [GatewayIntentBits.Guilds],

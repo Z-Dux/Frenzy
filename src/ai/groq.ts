@@ -1,5 +1,6 @@
 import Groq from "groq-sdk";
-import { config } from "../config";
+import { config } from "@config/app";
+
 const groq = new Groq({ apiKey: config.GROQ_API_KEY});
 
 export async function isTradingBased(content:string): Promise<boolean> {

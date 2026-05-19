@@ -1,9 +1,6 @@
 import { defineConfig } from "@mikro-orm/mongodb";
-import { UserSchema } from "./src/schema/user";
-import { PortfolioSchema } from "./src/schema/portfolio";
-import { TradeAnalysisSchema } from "./src/schema/tradeAnalysis";
-import { TradeSchema } from "./src/schema/trade";
-import { config } from "./config";
+import { UserSchema, PortfolioSchema, TradeAnalysisSchema, TradeSchema } from "./src/db/schema";
+import { config } from "./config/app";
 
 export default defineConfig({
   entities: [UserSchema, PortfolioSchema, TradeAnalysisSchema, TradeSchema],

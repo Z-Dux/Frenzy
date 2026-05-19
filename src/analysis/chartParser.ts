@@ -1,5 +1,5 @@
 import axios from "axios";
-import { isStockChartImage, processChart } from "./openrouter";
+import { isStockChartImage, processChart } from "@ai/openrouter";
 
 export type OCRResult = {
   rec_texts: string[];

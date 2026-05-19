@@ -1,8 +1,7 @@
 import { OpenRouter } from "@openrouter/sdk";
-import type { parseChartData } from "./chartParser";
-import { Constants } from "discord.js-selfbot-v13";
-import { config } from "../config";
-import type { CompactMsg } from "./discord";
+import type { parseChartData } from "@analysis/chartParser";
+import { config } from "@config/app";
+import type { CompactMsg } from "@discord/index";
 
 const openRouter = new OpenRouter({
   apiKey: config.OPENROUTER_API_KEY,

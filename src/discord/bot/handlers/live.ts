@@ -4,12 +4,12 @@ import {
   ContainerBuilder,
   MessageFlags,
 } from "discord.js";
-import { botClient } from ".";
-import { config } from "../../config";
-import { trader, type Trade } from "../trader";
-import { orm } from "../database";
-import { TradeSchema } from "../schema/trade";
-import { binance } from "../binance";
+import { botClient } from "@discord/bot";
+import { config } from "@config/app";
+import { trader, type Trade } from "@core/trader";
+import { orm } from "@db/index";
+import { TradeSchema } from "@db/schema";
+import { binance } from "@exchange/binance";
 import { color, sleep } from "bun";
 
 export async function listenLive(): Promise<void> {
@@ -75,6 +75,7 @@ export async function listenLive(): Promise<void> {
     const profit = computeProfit(trade, price);
     const pnl = (profit / (trade.margin || 1)) * 100;
     const isProfit = profit >= 0;
+    if(price === 0) return null;
 
     return [
       `${trade.leverage.toFixed(1)}x`.padStart(5).magenta,
@@ -90,10 +91,11 @@ export async function listenLive(): Promise<void> {
         )}` +
         `%)`.black,
     ].join(" ");
-  });
+  }).filter(Boolean);
 
   const pendingRows = pendingTrades.map((trade) => {
     const price = getPrice(trade.asset || "");
+    if(price === 0) return null;
     return [
       `${trade.leverage.toFixed(1)}x`.padStart(5).magenta,
       colorize(`[${trade.direction.toUpperCase()}]`.padEnd(7), trade.direction),
@@ -103,7 +105,7 @@ export async function listenLive(): Promise<void> {
       formatPrice(trade.stop_loss).padStart(10),
       //formatPrice(trade.take_profit || 0).padStart(10),
     ].join(" ");
-  });
+  }).filter(Boolean);
 
   const activeHeaders = [
     `Lev`.padEnd(5),
