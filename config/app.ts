@@ -4,6 +4,7 @@ EnvConfig();
 
 export const config = {
   token: process.env.DISCORD_TOKEN || "",
+  hostServers: ["1461803739013976138"],
   GROQ_API_KEY: process.env.GROQ_API_KEY || "",
   discordServers: [
     "1474861205460881481",

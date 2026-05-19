@@ -84,6 +84,30 @@ export class Trader {
     this.portfolio.balance = portfolio.balance;
     this.portfolio.pnl = portfolio.pnl;
   }
+  async setPortfolioBalance(balance: number) {
+    const em = orm.em.fork();
+
+    let [portfolio] = await em.find(PortfolioSchema, {}, { limit: 1 });
+    if (!portfolio) {
+      portfolio = em.create(PortfolioSchema, {
+        balance,
+        pnl: 0,
+        pnlHistory: [],
+      });
+      em.persist(portfolio);
+    } else {
+      portfolio.balance = balance;
+      portfolio.pnl = 0;
+      portfolio.pnlHistory = [];
+    }
+
+    await em.flush();
+
+    this.portfolio.balance = portfolio.balance;
+    this.portfolio.pnl = portfolio.pnl;
+
+    return portfolio;
+  }
   async getPortfolio() {
     const em = orm.em.fork();
 
