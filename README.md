@@ -71,7 +71,7 @@ Then, in a separate terminal, start the app with:
 bun run src/index.ts
 ```
 
-## TODO List
+## TODO / Feature List
 
 - [x] Discord Users trade/market sentiment analyser
 - [ ] Technical Indicator analyser (AI model)

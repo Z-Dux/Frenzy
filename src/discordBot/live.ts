@@ -74,8 +74,7 @@ export async function listenLive(): Promise<void> {
     const price = getPrice(trade.asset || "");
     const profit = computeProfit(trade, price);
     const pnl = (profit / (trade.margin || 1)) * 100;
-
-    const factor = trade.direction === "long" ? -1 : 1;
+    const isProfit = profit >= 0;
 
     return [
       `${trade.leverage.toFixed(1)}x`.padStart(5).magenta,
@@ -83,11 +82,11 @@ export async function listenLive(): Promise<void> {
       trade.asset.padStart(8),
       formatPrice(price).padStart(8),
       formatPrice(trade.entry).padStart(8),
-      `${colorize(profit.toFixed(4).padStart(8), factor)}` +
+      `${colorize(profit.toFixed(4).padStart(8), isProfit)}` +
         ` (`.black +
         `${colorize(
           ((pnl > 0 ? "+" : "") + pnl.toFixed(2)).padStart(6),
-          factor,
+          isProfit,
         )}` +
         `%)`.black,
     ].join(" ");
@@ -137,7 +136,7 @@ export async function listenLive(): Promise<void> {
 
   const totalLine =
     padAnsiEnd(
-      `Port: $${(portfolio.balance + totalMargin).toFixed(2)}`.cyan +
+      `Port: $${(portfolio.balance + totalProfit).toFixed(2)}`.cyan +
         ` (${colorize(
           `${todayPnL + totalProfit >= 0 ? "+" : "-"}$${Math.abs(
             todayPnL + totalProfit,
@@ -208,7 +207,7 @@ export async function listenLive(): Promise<void> {
       components,
       flags: MessageFlags.IsComponentsV2,
     });
-    console.log(`✓ Live trade message updated with id ${existingMessage.id}`);
+    ///console.log(`✓ Live trade message updated with id ${existingMessage.id}`);
   } else {
     //@ts-ignore
     const sent = await channel.send({

@@ -9,6 +9,7 @@ import { binance } from "./binance";
 import { orm } from "./database";
 import { TradeAnalysisSchema } from "./schema/tradeAnalysis";
 import { trader } from "./trader";
+import { ChannelType } from "discord.js";
 
 export const client = new Client();
 
@@ -17,9 +18,23 @@ client.on("ready", async () => {
   client.user?.setStatus(`dnd`);
 });
 
+const tags = ["trade", "journal", "paragon"];
 client.on("messageCreate", async (message) => {
-  1461803739013976138;
+  //1461803739013976138;
   if (message.author.bot && message.author.id != "1458201079513747652") return;
+  if (message.author.id == "241445417831759872")
+    console.log(message.channel.isThread() && message.channel.parent?.name);
+  if (
+    !(
+      (message.channel.isThread() || message.inGuild()) &&
+      tags.some((tag) =>
+        //@ts-ignore
+        message.channel.parent.name.toLowerCase().includes(tag),
+      )
+    )
+  )
+    return;
+
   if (!(message.guildId && config.discordServers.includes(message.guildId)))
     return;
   if (!message.inGuild()) return;
@@ -38,15 +53,17 @@ client.on("messageCreate", async (message) => {
     scrapedContent,
     scrapedContent.m[0]?.attachments,
   );
-  if(scrapedContent.m.length === 0) return console.log(`✗ No valid attachments found in message ${message.id}`);
+  if (scrapedContent.m.length === 0)
+    return console.log(`✗ No valid attachments found in message ${message.id}`);
   const analysedTrade = await processMessage(scrapedContent.m);
 
   console.log(`→ Analysed trade from ${message.author.tag}:`, analysedTrade);
 
   analysedTrade.asset = analysedTrade.asset
-    ? (await binance.searchCoin(analysedTrade.asset || ""))[0]?.symbol ||
+    ? (await binance.searchCoin(analysedTrade.asset || ""))[0] ||
       analysedTrade.asset
     : null;
+  console.log(`→ Mapped asset: ${analysedTrade.asset}`);
   if (analysedTrade.confidence < 0.5) return;
   sendTrade(analysedTrade as any, message);
   if (
@@ -58,6 +75,9 @@ client.on("messageCreate", async (message) => {
     )
   )
     return;
+  const currentPrice =
+    analysedTrade.current_price ||
+    (await binance.getPrice(analysedTrade.asset));
   if (analysedTrade.action === "pending") {
     if (!analysedTrade.type || !analysedTrade.asset) return;
     await trader.addTrade(
@@ -186,11 +206,13 @@ export async function scrapeMessages(message: Message) {
     if (msg.attachments.size > 0) {
       content += " [img]";
     }
-    const attachments = (await Promise.all(
-      msg.attachments.map(
-        async (attachment) => await extractChart(attachment.url),
-      ),
-    )).filter(Boolean);
+    const attachments = (
+      await Promise.all(
+        msg.attachments.map(
+          async (attachment) => await extractChart(attachment.url),
+        ),
+      )
+    ).filter(Boolean);
 
     //if(attachments.length == 0) continue;
     console.log(`Extracting chart...`);

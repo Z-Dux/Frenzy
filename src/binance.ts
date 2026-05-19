@@ -120,8 +120,9 @@ export class Binance extends EventEmitter {
   }
 
   public async subscribe(coin: string) {
-    console.log(`Subscribing to ${coin}`);
-    const symbol = coin.toLowerCase();
+    const fixCoin = (await binance.searchCoin(coin))[0] || coin;
+    const symbol = fixCoin.toLowerCase();
+    console.log(`Subscribing to ${fixCoin}`);
 
     if (!this.wsConnection) {
       this.wsConnectionPromise ??= this.client.websocketStreams

@@ -223,6 +223,7 @@ export async function processMessage(msg: CompactMsg[]) {
 
     RULES FOR INTERPRETING THE TRADE SETUP:
     * "action" is "pending" if candle has not touched the box. "active" if last candle is inside the box. "missed" if last candle is outside, to right of the box.
+    * STRICTLY keep "action" as pending if no candles are touching the box, even if price has technically moved past the entry level.
     * "@ m" represents market entry, and action is "pending".
     * "asset" ticker for the asset, standard format.
     * "confidence" is between 0 and 1 defining how certain it is a trade setup.

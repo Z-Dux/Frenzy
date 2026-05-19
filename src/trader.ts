@@ -81,6 +81,9 @@ export class Trader {
     const em = orm.em.fork();
     em.persist(portfolio);
     await em.flush();
+    // Sync the updated balance back to the instance
+    this.portfolio.balance = portfolio.balance;
+    this.portfolio.pnl = portfolio.pnl;
   }
   async getPortfolio() {
     const em = orm.em.fork();
@@ -103,7 +106,7 @@ export class Trader {
     return portfolio;
   }
   async addTrade(trade: Trade, create = false) {
-    if (trade.status !== "closed") this.binance.subscribe(trade.asset);
+    if (trade.status !== "closed") this.binance.subscribe(await trade.asset);
     if (create) {
       const em = orm.em.fork();
       const tradeInstance = em.create(TradeSchema, trade);

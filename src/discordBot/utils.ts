@@ -11,6 +11,7 @@ import { config } from "../../config";
 import type { Message } from "discord.js-selfbot-v13";
 import "colors";
 import { trader, type Trade } from "../trader";
+import { binance } from "../binance";
 
 export async function sendTrade(trade: TradeAnalysis, message: Message<true>) {
   if (
@@ -18,9 +19,10 @@ export async function sendTrade(trade: TradeAnalysis, message: Message<true>) {
       trade.has_trade &&
       (trade.entry || trade.order_type == `market`) &&
       trade.stop_loss
-    )
+    ) || !trade.asset
   )
     return false;
+    const current_price = trade.current_price || await binance.getPrice(trade.asset)
 
   const tradePara = [
     `### [Trade from ${message.author.tag} in ${message.channel.guild?.name}](${message.url})`,
@@ -29,7 +31,7 @@ export async function sendTrade(trade: TradeAnalysis, message: Message<true>) {
     `- **Take Profit:** \`$${trade.take_profit}\``,
   ].join("\n");
   const additionalPara = [
-    `- **Current Price:** \`${trade.current_price}\``,
+    `- **Current Price:** \`${current_price}\``,
     `- **Action:** \`${trade.action}\``,
     `- **Asset:** \`${trade.asset}\``,
   ].join("\n");
