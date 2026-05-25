@@ -1,9 +1,14 @@
 import Groq from "groq-sdk";
 import { config } from "@config/app";
+import { EmbeddingClassifier } from "@core/index";
 
 const groq = new Groq({ apiKey: config.GROQ_API_KEY});
+const classifier = new EmbeddingClassifier();
+classifier.initialize();
 
 export async function isTradingBased(content:string): Promise<boolean> {
+    const res = await classifier.classify(content)
+    if(!res.isTradeSetup) return false;
     try {
         //console.log(`→ [Groq]: Checking if message is trade-related`);
         const response = await groq.chat.completions.create({

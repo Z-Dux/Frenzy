@@ -14,6 +14,7 @@
   "dependencies": {
     "@binance/derivatives-trading-coin-futures": "^13.0.7",
     "@binance/derivatives-trading-usds-futures": "^28.0.0",
+    "@huggingface/transformers": "^4.2.0",
     "@mikro-orm/core": "^7.0.11",
     "@mikro-orm/mongodb": "^7.0.11",
     "@mikro-orm/postgresql": "^7.0.11",
